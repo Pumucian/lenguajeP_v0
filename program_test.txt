@@ -1,0 +1,41 @@
+#Tests
+Num a = 5
+Num b is 3
+Num c is -6.4
+show a
+show a plus b
+show a minus b
+show a times b
+show a divided by b plus cx
+if a > b then
+	show "a is greater than b"
+	show "Hola"
+	done
+if a < b then
+   	show "a is lower than b" done
+if a is b then
+   	show "a is equals to b"
+done
+if a not is b then
+   	show "a is not equals to b"
+	done
+if a is b and a not is c then show "TEST" done
+if a not <= b then
+   	show "a is not lower or equals to b"
+	done
+from 0 to 4 do
+   	show "Iteration number " + iter
+	done
+Text greet is "Hello world."
+show greet
+List Num l is 2, 3, 4, 5
+foreach number in l do
+   	show number
+	done
+from 0 to 3 do
+   	show l[number]
+	done
+
+func mean ( a, b )
+ 	return a plus b divided by 2
+endfunc

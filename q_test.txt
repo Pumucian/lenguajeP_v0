@@ -1,0 +1,7 @@
+Num a is 3
+Num b = 3.2
+List Num lista is 2, 1, 4, 2.5
+Text s = "Hola mundo"
+show 4 % a + 2 * (5 + a) * 4
+show a
+show s
