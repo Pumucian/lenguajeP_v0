@@ -1,7 +1,13 @@
-Num a is 3
+Num a is 11
 Num b = 3.2
 List Num lista is 2, 1, 4, 2.5
 Text s = "Hola mundo"
 show 4 % a + 2 * (5 + a) * 4
+if a is 3 + 2 * 4 then show "if correcto" done
+from 4 to 6 do show iter done
 show a
+show b
+foreach number in lista do show "bucle" show number done
+Num c is 3
+show c
 show s

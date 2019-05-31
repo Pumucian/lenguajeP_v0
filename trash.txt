@@ -1,0 +1,139 @@
+	NUM VARNAME asignator INT {struct symbol s; s = getSymbol($2); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {s.type = 0; s.name = $2; s.scope = currentScope; localOffset += 4; s.memDir = localOffset; push(stack, s); initQNum($4, 0, 1);}}
+	| NUM VARNAME asignator FLOAT {struct symbol s; s = getSymbol($2); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {s.type = 1; s.name = $2; s.scope = currentScope; localOffset += 4; s.memDir = localOffset; push(stack, s); initQNum(0, $4, 0);}}
+	| NUM VARNAME asignator VARNAME
+
+lenguajeP:
+	lenguajeP line
+	|;
+
+line:
+	init
+	| access
+	| show 
+	| ifClause
+	| fromClause
+	| initFunction
+	| foreachClause
+	| returnClause
+	| function;
+
+init:
+	initNum
+	| initText
+	| initList;
+
+initNum:
+	NUM VARNAME asignator mathExpr {initNumVarQ($2, $4);};
+initText:
+	TEXT VARNAME asignator STRING {struct symbol s; s = getSymbol($2); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {s.type = 2; s.name = $2; s.scope = currentScope; memoryDir -= getStringLength($4); localOffset += 4; s.memDir = localOffset; initTextQ(removeQuotes($4)); push(stack, s);}}
+	| TEXT VARNAME asignator VARNAME;
+
+asignator:
+	IS
+	| '=';
+
+initList:
+	LIST NUM VARNAME {struct symbol s; s = getSymbol($<string>3); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {$<entero>$ = localOffset; listPosition = 0;}} asignator numList {struct symbol s; s.memDir = $<entero>4; s.type = 3; s.name = $<string>3; s.scope = currentScope; s.size = listPosition; push(stack, s);};
+numList:
+	numberList ',' numList
+	| numberList;
+numberList:
+	INT {localOffset += 4; fprintf(fp, "\tF(R7-%i)=%i;\n", localOffset, $1); listPosition++;}
+	| FLOAT {localOffset += 4; fprintf(fp, "\tF(R7-%i)=%f;\n", localOffset, $1); listPosition++;}
+	| mathExpr;
+
+access:
+	accessNum
+	| accessText
+	| accessListAccess
+	| VARNAME asignator VARNAME;
+
+accessNum:
+	VARNAME asignator INT {struct symbol s; s = getSymbol($1); if (s.type == -1) yyerror("la variable no ha sido inicializada."); else if (s.type > 1) yyerror("La variable no es de tipo numérico."); else {changeSymbolType($1, 0); fprintf(fp, "\tI(R7-%i)=%i;\n", s.memDir, $3);}}
+	| VARNAME asignator FLOAT {struct symbol s; s = getSymbol($1); if (s.type == -1) yyerror("la variable no ha sido inicializada."); else if (s.type > 1) yyerror("La variable no es de tipo numérico."); else {changeSymbolType($1, 1); fprintf(fp, "\tF(R7-%i)=%f;\n", s.memDir, $3);}}
+	| VARNAME asignator mathExpr 
+	| VARNAME asignator function;
+
+accessText:
+	VARNAME asignator STRING {struct symbol s; s = getSymbol($1); if (s.type == -1) yyerror("la variable no ha sido inicializada."); else if (s.type != 2) yyerror("La variable no es de tipo texto."); else {memoryDir -= getStringLength($3); assignTextQ(removeQuotes($3), s.memDir);}};
+
+accessListAccess:
+	listAccess asignator INT
+	| listAccess asignator FLOAT;
+
+
+	
+number:
+	INT {fprintf(fp, "\tR%i=%i;\n", currentReg, $1); $$ = currentReg; advanceRegister(); }
+	| FLOAT {fprintf(fp, "\tRR%i=%f;\n", currentFloatReg, $1); $$ = currentFloatReg + 10; advanceFloatRegister();};
+mathExpr:
+	mathExpr PLUS mathExpr {fprintf(fp, "\tR%i=R%i+R%i;\n", $<entero>1, $<entero>1, $<entero>3); $<entero>$ = $<entero>1; currentReg--;}
+	| mathExpr MINUS mathExpr
+	| mathExpr TIMES mathExpr {fprintf(fp, "\tR%i=R%i*R%i;\n", $<entero>1, $<entero>1, $<entero>3); $<entero>$ = $<entero>1; currentReg--;}
+	| mathExpr DIVIDED_BY mathExpr
+	| mathExpr MOD mathExpr
+	| OPEN_PAREN mathExpr CLOSE_PAREN
+	| VARNAME 
+	| INT {fprintf(fp, "\tR%i=%i;\n", currentReg, $<entero>1); $<entero>$ = currentReg; advanceRegister();}
+	| FLOAT {fprintf(fp, "\tRR%i=%f;\n", currentReg, $<real>1); $<entero>$ = currentReg + 10; advanceFloatRegister();}
+	| listAccess
+	| function;
+
+show:
+	SHOW VARNAME {printQVariable($<string>2);}	
+	| SHOW STRING {loadAndPrintQ(removeQuotes($<string>2));}
+	| SHOW listAccess {printQListAccess();}
+	| SHOW {printStringQ(emptyStringDir);};
+
+ifClause:
+	IF condition THEN {processCondition($2); fprintf(fp, "\n\tIF("); $<entero>$ = nextLabel++; getNegationQ($2[1]); fprintf(fp, "R0) GT(%i);\n", $<entero>$); currentReg = 0; currentFloatReg = 0; currentScope++;} lenguajeP DONE {fprintf(fp, "L %i:\n", $<entero>4); currentScope--; currentReg = 0; currentFloatReg = 0;};
+
+condition:
+	comparable negation comparator comparable {int lista[4]; lista[0] = $<entero>1; lista[1] = $2; lista[2] = $3; lista[3] = $<entero>4; $$ = lista;};
+negation:
+	NOT {$$ = 1;}
+	|{$$ = 0;};
+comparator:
+	GREATER {$$ = 0;}
+	| LOWER {$$ = 1;}
+	| IS {$$ = 2;}
+	| GEQUALS {$$ = 3;}
+	| LEQUALS {$$ = 4;}
+	| EQUALS {$$ = 2;}
+	| NOT_EQUALS {$$ = 5;}; 
+comparable:
+	VARNAME {struct symbol s = getSymbol($1); if (s.type < 0) yyerror("La variable no existe."); else if (s.type == 0) {fprintf(fp, "\tR%i=I(R7-%i);\n", currentReg, s.memDir); $<entero>$ = currentReg; advanceRegister();} else if (s.type == 1) {fprintf(fp, "\tRR%i=F(R7-%i);\n", currentFloatReg, s.memDir); $<entero>$ = currentFloatReg + 10; advanceFloatRegister();} else {yyerror("Tipo de variable no permitida para esta operación."); }}
+	| number {$<entero>$ = $1;}
+	| listAccess;
+
+fromClause:
+	FROM {if (inFor == 1) yyerror("Ya se encuentra en un bucle FROM. Este lenguaje no permite bucles FROM anidados."); else {inFor = 1; currentScope++; fprintf(fp, "\tR5=0;\nL %i:\n", nextLabel); $<entero>$ = nextLabel; nextLabel += 2; struct symbol s; s.name = "iter"; localOffset += 4; s.memDir = localOffset; s.scope = currentScope; push(stack, s);}} fromable TO fromable {fprintf(fp, "\tR0=R0+R5;\n\tI(R7-%i)=R0;\n\tIF(R0>R1) GT(%i);\n", getSymbol("iter").memDir, $<entero>2 + 1);} DO lenguajeP {fprintf(fp, "\tR5=R5+1;\n\tGT(%i);\nL %i:\n", $<entero>2, $<entero>2 + 1);} DONE {inFor = 0; reduceScope();};
+
+fromable:
+	VARNAME {struct symbol s = getSymbol($1); if (s.type != 0) yyerror("No se puede iterar sobre un número no entero."); else {fprintf(fp, "\tR%i=I(R7-%i);\n", currentReg, s.memDir); advanceRegister();}}
+	| INT {fprintf(fp, "\tR%i=%i;\n", currentReg, $1); advanceRegister();}
+	| FLOAT {yyerror("No se puede iterar sobre un número no entero."); exit(1);};
+
+foreachClause:
+	FOREACH VARNAME IN VARNAME DO {currentScope++; $<entero>$ = foreachVarQ($<string>2, $<string>4);} lenguajeP {fprintf(fp, "\tR5=R5+1;\n\tGT(%i);\nL %i:\n", $<entero>6, $<entero>6 + 1);} DONE {reduceScope();}
+	| FOREACH VARNAME IN {$<entero>$ = localOffset; listPosition = 0;} numList {struct symbol s; s.memDir = $<entero>4; s.type = 3; s.name = "foreach"; s.scope = ++currentScope; s.size = listPosition; push(stack, s);} DO {$<entero>$ = foreachVarQ($<string>2, "foreach");} lenguajeP {fprintf(fp, "\tR5=R5+1;\n\tGT(%i);\nL %i:\n", $<entero>8, $<entero>8 + 1);} DONE {reduceScope();}; 
+
+listAccess:
+	VARNAME OPEN_BRACKET VARNAME CLOSE_BRACKET {listAccessVar($<string>1, $<string>3);}
+	| VARNAME OPEN_BRACKET INT CLOSE_BRACKET {listAccessInt($<string>1, $<entero>3);};
+
+initFunction:
+	FUNC function lenguajeP ENDFUNC;
+funcParam:
+	VARNAME ',' funcParam
+	| VARNAME;
+function:
+	VARNAME OPEN_PAREN funcParam CLOSE_PAREN;
+
+returnClause:
+	RETURN returnable;
+returnable:
+	VARNAME
+	| STRING
+	| listAccess
+	| number;

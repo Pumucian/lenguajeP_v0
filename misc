@@ -1,0 +1,6 @@
+ 
+void removeScope(struct Stack* stack){
+	while(currentScope==stack->array[stack->top].scope){
+		stack->pop--;
+	}
+}
