@@ -56,13 +56,21 @@
 	int spillMode = 0;
 	int spillRegs = 0;
 	int lastRegSpilled = -1;
-	int spilled[5] = {1, 1, 1, 1, 1};
+	int spilled[5] = {1, 1, 1, 1, 1};	
+	int floatSpillMode = 0;
+	int floatSpillRegs = 0;
+	int lastFloatRegSpilled = -1;
+	int floatSpilled[4] = {1, 1, 1, 1};
 
 	void advanceRegister();
 	void reduceRegister();
 	void advanceFloatRegister();
 	void reduceScope();
 	void reduceLastRegSpilled();
+	void reduceFloatRegister();
+	void reduceLastFloatRegSpilled();
+	void intSpill(int r1, int r2);
+	void floatSpill(int r1, int r2);
 
 	void initQFile();
 	void initTextQ(char* string);
@@ -99,6 +107,8 @@
 	void endFromQ(int label);
 	void initForeachQ(char* varName, int cod);
 	void endForeachQ(int label);
+	void assignRegToVar(char* varName, int reg);
+	int accessListQ(char* varName, int reg);
 
 	void changeSymbolType(char* varName, int type);
 	char* notImplemented();
@@ -127,11 +137,11 @@
 %token FUNC RETURN
 %token OPEN_BRACKET CLOSE_BRACKET OPEN_PAREN CLOSE_PAREN
 
-%type <entero> expr function
+%type <entero> expr function listAccess
 %type <string> comparator negation
 
 %left SHOW
-%left NOT GREATER LOWER GEQUALS LEQUALS EQUALS NOT_EQUALS IS VARNAME INT FLOAT STRING
+%left NOT GREATER LOWER OPEN_BRACKET CLOSE_BRACKET GEQUALS LEQUALS EQUALS NOT_EQUALS IS VARNAME INT FLOAT STRING
 %left PLUS MINUS
 %left TIMES DIVIDED_BY MOD
 %left OPEN_PAREN CLOSE_PAREN
@@ -140,12 +150,12 @@
 %%
 
 lenguajeP:
-	lenguajeP line
+	lenguajeP line //{fprintf(fp, "/////////////LINEA BINGOOOOO\n");}
 	|;
 
 line:
 	init
-	//| access
+	| assign
 	| show 
 	| ifClause
 	| fromClause
@@ -169,51 +179,30 @@ asignator:
 	| '=';
 
 initList:
-	LIST NUM VARNAME {struct symbol s; s = getSymbol($3); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {$<entero>$ = localOffset; listPosition = 0;}} asignator numList {struct symbol s; s.memDir = $<entero>4; s.type = 3; s.name = $3; s.scope = currentScope; s.size = listPosition; push(stack, s); localOffset += listPosition * 4; listPosition = 0;};
+	LIST NUM VARNAME {struct symbol s; s = getSymbol($3); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {$<entero>$ = localOffset; listPosition = 0;}} asignator numList {struct symbol s; s.memDir = $<entero>4; s.type = 3; s.name = $3; s.scope = currentScope; s.size = listPosition; push(stack, s); localOffset += listPosition * 4; listPosition = 0; resetRegs();};
 numList:
 	expr {initListPositionQ($1);} ',' numList
-	| expr {initListPositionQ($1); $<entero>$ = 100 + listPosition; fprintf(fp, "\tR0=%i;\n", localOffset);}; //100 indica que la posición actual es el comienzo de una lista
+	| expr {initListPositionQ($1); $<entero>$ = 100 + listPosition; }; //100 indica que la posición actual es el comienzo de una lista
 
-/*access:
-	accessNum
-	| accessText
-	| accessListAccess
-	| VARNAME asignator VARNAME;
-
-accessNum:
-	VARNAME asignator INT {struct symbol s; s = getSymbol($1); if (s.type == -1) yyerror("la variable no ha sido inicializada."); else if (s.type > 1) yyerror("La variable no es de tipo numérico."); else {changeSymbolType($1, 0); fprintf(fp, "\tI(R7-%i)=%i;\n", s.memDir, $3);}}
-	| VARNAME asignator FLOAT {struct symbol s; s = getSymbol($1); if (s.type == -1) yyerror("la variable no ha sido inicializada."); else if (s.type > 1) yyerror("La variable no es de tipo numérico."); else {changeSymbolType($1, 1); fprintf(fp, "\tF(R7-%i)=%f;\n", s.memDir, $3);}}
-	| VARNAME asignator expr 
-	| VARNAME asignator function;
-
-accessText:
-	VARNAME asignator STRING {struct symbol s; s = getSymbol($1); if (s.type == -1) yyerror("la variable no ha sido inicializada."); else if (s.type != 2) yyerror("La variable no es de tipo texto."); else {memoryDir -= getStringLength($3); assignTextQ(removeQuotes($3), s.memDir);}};
-
-accessListAccess:
-	listAccess asignator INT
-	| listAccess asignator FLOAT;
-
-
-	
-number:
-	INT {fprintf(fp, "\tR%i=%i;\n", currentReg, $1); $$ = currentReg; advanceRegister(); }
-	| FLOAT {fprintf(fp, "\tRR%i=%f;\n", currentFloatReg, $1); $$ = currentFloatReg + 10; advanceFloatRegister();};*/
+assign:
+	VARNAME asignator expr {assignRegToVar($1, $3); resetRegs();};
+	//| listAccess asignator expr;
 expr:
 	expr PLUS expr {$$ = doExpr($1, $3, "+");}
 	| expr MINUS expr {$$ = doExpr($1, $3, "-");}
 	| expr TIMES expr {$$ = doExpr($1, $3, "*");}
 	| expr DIVIDED_BY expr {$$ = doExpr($1, $3, "/");}
 	| expr MOD expr {$$ = doExpr($1, $3, "%");}
-	| OPEN_PAREN expr CLOSE_PAREN {$$ = $2;}
+	| OPEN_PAREN expr CLOSE_PAREN {$$ = $2;}	
+	| listAccess {$$ = $1;}
 	| VARNAME {$$ = getVarnameRegQ($1);} 
 	| INT {advanceRegister(); fprintf(fp, "\tR%i=%i;\n", currentReg, $1); $$ = currentReg;}
 	| FLOAT {advanceFloatRegister(); fprintf(fp, "\tRR%i=%f;\n", currentFloatReg, $1); $$ = currentFloatReg + 10; }
 	| STRING {advanceRegister(); $$ = getStringRegQ(removeQuotes($1)); }
-	//| listAccess
 	| function {$$ = $1;};
 
 show:
-	SHOW expr {printFromReg($2);}
+	SHOW expr {printFromReg($2); resetRegs();}
 	| SHOW {printStringQ(emptyStringDir);};
 
 ifClause:
@@ -232,14 +221,13 @@ comparator:
 	| NOT_EQUALS {$$ = "!=";}; 
 
 fromClause:
-	FROM expr TO expr {$<entero>$ = nextLabel; initFromQ($2, $4);} DO lenguajeP {endFromQ($<entero>5);} DONE {};
+	FROM expr TO expr {$<entero>$ = nextLabel; initFromQ($2, $4);} DO lenguajeP {endFromQ($<entero>5);} DONE;
 
 foreachClause:
 	FOREACH VARNAME IN expr {$<entero>$ = nextLabel; initForeachQ($2, $4);} DO lenguajeP {endForeachQ($<entero>5);} DONE;
 
-/*listAccess:
-	VARNAME OPEN_BRACKET VARNAME CLOSE_BRACKET {listAccessVar($<string>1, $<string>3);}
-	| VARNAME OPEN_BRACKET INT CLOSE_BRACKET {listAccessInt($<string>1, $<entero>3);};*/
+listAccess:
+	VARNAME OPEN_BRACKET expr CLOSE_BRACKET {$$ = accessListQ($1, $3);};
 
 initFunction:
 	FUNC function lenguajeP ENDFUNC;
@@ -274,9 +262,10 @@ int main(int argc, char** argv) {
 void advanceRegister(){
 	if (currentReg == 4) {
 		currentReg = 0;
+		if (spillMode) spillRegs++;
 		spillMode = 1;
 		localOffset += 4;
-		fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset);
+		if (spilled[0] != 0) fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset);
 	}
 	else {
 		currentReg++;
@@ -302,8 +291,34 @@ void reduceLastRegSpilled(){
 }
 
 void advanceFloatRegister(){
-	if (currentFloatReg == 3) currentFloatReg = 0;
-	else currentFloatReg++;
+	if (currentFloatReg == 3) {
+		currentFloatReg = 0;
+		if (floatSpillMode) floatSpillRegs++;
+		floatSpillMode = 1;
+		localOffset += 4;
+		if (floatSpilled[0] != 0) fprintf(fp, "\tF(R6-%i)=RR0;\n", localOffset);
+	}
+	else {
+		currentFloatReg++;
+		if (floatSpillMode) {
+			if (floatSpilled[currentFloatReg] != 0){				
+				floatSpillRegs++;
+				localOffset += 4;
+				fprintf(fp, "\tF(R6-%i)=RR%i;\n", localOffset, currentFloatReg);
+			}
+			floatSpilled[currentFloatReg] = 1;	
+		}
+	}
+}
+
+void reduceFloatRegister(){
+	if (currentFloatReg == 0) currentFloatReg = 3;
+	else currentFloatReg--;
+}
+
+void reduceLastFloatRegSpilled(){
+	if (lastFloatRegSpilled == 0) lastFloatRegSpilled = 3;
+	else lastFloatRegSpilled--;
 }
 
 int isNotVar(int type){
@@ -326,33 +341,58 @@ int varIsList(int type){
 	return (type == 3);
 }
 
+void floatSpill(int r1, int r2){
+	if (floatSpillMode){		
+		if (lastFloatRegSpilled == -1) lastFloatRegSpilled = r2;
+		else if (r1 == lastFloatRegSpilled){
+			fprintf(fp, "\tRR%i=F(R6-%i);\n", r1, localOffset);
+			localOffset -= 4;			
+			if (floatSpillRegs > 0) {floatSpillRegs--; reduceLastFloatRegSpilled();}
+			else {
+				lastFloatRegSpilled = -1;
+				floatSpillMode = 0;
+			}
+		}
+		floatSpilled[r2] = 0;
+	}
+}
+
+void intSpill(int r1, int r2){
+	if (spillMode){		
+		if (lastRegSpilled == -1) lastRegSpilled = r2;
+		else if (r1 == lastRegSpilled){
+			fprintf(fp, "\tR%i=I(R6-%i);\n", r1, localOffset);
+			localOffset -= 4;						
+			if (spillRegs > 0) {spillRegs--; reduceLastRegSpilled();}
+			else {
+				lastRegSpilled = -1;
+				spillMode = 0;
+			}
+		}
+		spilled[r2] = 0;
+	}
+}
+
 int doExpr(int r1, int r2, char* op){
 	if (r1 > 100 || r2 > 100) yyerror("No se puede operar con una lista. Pruebe a operar un elemento."); // 100 indica que hay una posición de lista base en R0 y cada número que sume es el tamaño de dicha lista (p. ej 105 indica una lista tamaño 5)
 	else if (r1 < -9 || r2 < -9) yyerror("No se puede operar con una variable texto.");
 	else if (r1 > 9 && r2 > 9) {
+		floatSpill(r1-10, r2-10);
 		fprintf(fp, "\tRR%i=RR%i%sRR%i;\n", r1-10, r1-10, op, r2-10); 
-		currentFloatReg--;
-	} else if (r1 > 9) {
+		reduceFloatRegister();
+	} else if (r1 > 9) {		
+		int r_aux = r2 - 1;
+		if (r_aux == -1) r_aux = 4;
+		intSpill(r2, r2);
 		fprintf(fp, "\tRR%i=RR%i%sR%i;\n", r1-10, r1-10, op, r2);
-		currentFloatReg--;
-	} else if (r2 > 9) {
+	} else if (r2 > 9) {		
+		int r_aux = r1 - 1;
+		if (r_aux == -1) r_aux = 4;
+		intSpill(r1, r1);
 		fprintf(fp, "\tRR%i=R%i%sRR%i;\n", r2-10, r1, op, r2-10);
 		return r2;
 	} else {
-		fprintf(fp, "///////////%i\n", spillRegs);	
-		if (spillMode){		
-			if (lastRegSpilled == -1) lastRegSpilled = r2;
-			else if (r1 == lastRegSpilled){
-				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, localOffset);
-				localOffset -= 4;
-				spilled[r2] = 0;			
-				if (spillRegs > 0) {spillRegs--; reduceLastRegSpilled();}
-				else {
-					lastRegSpilled = -1;
-					spillMode = 0;
-				}
-			}
-		}
+		intSpill(r1, r2);
 		fprintf(fp, "\tR%i=R%i%sR%i;\n", r1, r1, op, r2); 
 		reduceRegister();
 	}
@@ -373,6 +413,13 @@ void initQFile(){
 void resetRegs(){
 	currentReg = -1;
 	currentFloatReg = -1;
+	spillMode = 0;
+	floatSpillMode = 0;
+	int i = 0;
+	for (i; i < 5; i++){
+		spilled[i] = 1;
+		if (i < 4) floatSpilled[i] = 1;	
+	}
 }
 
 void initNumVarQ(char* varName, int reg){
@@ -491,7 +538,6 @@ void printFromReg(int reg){
 		fprintf(fp, "\tGT(printint_);\n");
 		fprintf(fp, "L %i:\n", nextLabel++);
 	}
-	resetRegs();
 }
 
 void processCondition(int r1, int r2, char* comp){
@@ -540,6 +586,7 @@ void endFromQ(int label){
 	fprintf(fp, "L %i:\n", label+1);
 	inFor = 0; 
 	removeScope(stack);
+	resetRegs();
 }
 
 void initForeachQ(char* varName, int cod){
@@ -584,6 +631,71 @@ void endForeachQ(int label){
 	fprintf(fp, "L %i:\n", label+1);
 	//inFor = 0; 
 	removeScope(stack);
+	resetRegs();
+}
+
+void changeSymbolType(char* varName, int type){
+	int i;
+	for (i = 0; i <= stack->top; i++){
+		if (strcmp(varName, stack->array[i].name) == 0){
+			stack->array[i].type = type;
+		}
+	}
+}
+
+void assignRegToVar(char* varName, int reg){
+	struct symbol s = getSymbol(varName);
+	if (isNotVar(s.type)) yyerror("La variable no existe.");
+	else if (varIsInt(s.type)) {
+		if (reg > 100 || reg < -9) yyerror("Los tipos son incompatibles.");
+		else if (reg > 9) {
+			changeSymbolType(varName, 1);
+			fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg-10);
+		} else fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+	} else if (varIsFloat(s.type)){
+		if (reg > 100 || reg < -9) yyerror("Los tipos son incompatibles.");
+		else if (reg < 9) {
+			changeSymbolType(varName, 0);
+			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+		} else fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg-10);
+	} else if (varIsString(s.type)){
+		if (reg > -1) yyerror("Los tipos son incompatibles.");
+		fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg+10);
+	} else if (varIsList(s.type)) yyerror("No se puede asignar una lista. Pruebe a asignar elementos.");
+}
+
+int accessListQ(char* varName, int reg){
+	struct symbol l = getSymbol(varName);
+	if (!varIsList(l.type)) yyerror("Solo se puede acceder a posiciones de listas.");	
+	else {
+		if (reg < 0 || reg > 9) yyerror("Solo se puede acceder a una posición entera de una lista.");
+		else {
+			advanceFloatRegister();
+			int aux1 = reg + 1;
+			if (aux1 == 5) aux1 = 0;
+			localOffset += 4;
+			fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, aux1);			
+			int aux2 = aux1 + 1;
+			if (aux2 == 5) aux2 = 0;
+			localOffset += 4;
+			fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, aux2);
+			fprintf(fp, "\tR%i=%i;\n", aux1, l.size);
+			fprintf(fp, "\tR%i=R%i;\n", aux2, reg);
+			fprintf(fp, "\tIF(R%i<0) GT(-2);\n", aux2);
+			fprintf(fp, "\tIF(R%i>=R%i) GT(-2);\n", aux2, aux1); //Se sale del límite del array
+			fprintf(fp, "\tR%i=4*R%i;\n", aux1, aux2);
+			fprintf(fp, "\tR%i=R%i+4;\n", aux1, aux1);
+			fprintf(fp, "\tR%i=%i+R%i;\n", aux1, l.memDir, aux1);
+			fprintf(fp, "\tRR%i=F(R6-R%i);\n", currentFloatReg, aux1);
+			fprintf(fp, "\tR%i=I(R6-%i);\n", aux2, localOffset);
+			localOffset -= 4;
+			fprintf(fp, "\tR%i=I(R6-%i);\n", aux1, localOffset);
+			localOffset -= 4;
+			if (spillMode) reduceRegister();
+			else currentReg--;
+		}
+	}
+	return currentFloatReg+10;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hacia abajo es código viejo que hay que limpiar
@@ -743,15 +855,6 @@ char* removeQuotes(char* s){
 	res++;
 	res[strlen(res)-1] = 0;
 	return res;
-}
-
-void changeSymbolType(char* varName, int type){
-	int i;
-	for (i = 0; i <= stack->top; i++){
-		if (strcmp(varName, stack->array[i].name) == 0){
-			stack->array[i].type = type;
-		}
-	}
 }
 
 void yyerror(const char* mens){
