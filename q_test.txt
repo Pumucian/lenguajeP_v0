@@ -2,7 +2,7 @@ Num a is 11
 Num b = 3.2
 List Num lista is 2, 1, 4, 2.5
 Text s = "Hola mundo"
-show 4 % a + 2 * (5 + a) * 4
+show (1 + 4) * (5 + (2 + (2 + (2 + (2 + (2 + (2 + (4 * 3))))))) + 6) * (7 + 8) * (9 + 10) * (11 + 12) * (13 + 14) * (15 + 16)
 if a is 3 + 2 * 4 then show "if correcto" done
 from 4 to 6 do show iter done
 show a

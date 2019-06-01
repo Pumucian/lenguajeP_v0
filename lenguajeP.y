@@ -49,14 +49,20 @@
 	int nextLabel = 1;
 	int nextStatBlock = 1;
 	int emptyStringDir;
-	int currentReg = 0;
+	int currentReg = -1;
 	int currentFloatReg = 0;
 	int inFor = 0;
 	int listPosition;
+	int spillMode = 0;
+	int spillRegs = 0;
+	int lastRegSpilled = -1;
+	int spilled[5] = {1, 1, 1, 1, 1};
 
 	void advanceRegister();
+	void reduceRegister();
 	void advanceFloatRegister();
 	void reduceScope();
+	void reduceLastRegSpilled();
 
 	void initQFile();
 	void initTextQ(char* string);
@@ -81,7 +87,7 @@
 	int varIsList(int type);
 
 	void resetRegs();
-	void doExpr(int r1, int r2, char* op);	
+	int doExpr(int r1, int r2, char* op);	
 	void initNumVarQ(char* varName, int reg);
 	void initTextVarQ(char* varName, int reg);
 	void initListPositionQ(int reg);
@@ -193,16 +199,16 @@ number:
 	INT {fprintf(fp, "\tR%i=%i;\n", currentReg, $1); $$ = currentReg; advanceRegister(); }
 	| FLOAT {fprintf(fp, "\tRR%i=%f;\n", currentFloatReg, $1); $$ = currentFloatReg + 10; advanceFloatRegister();};*/
 expr:
-	expr PLUS expr {doExpr($1, $3, "+"); $$ = $1;}
-	| expr MINUS expr {doExpr($1, $3, "-"); $$ = $1;}
-	| expr TIMES expr {doExpr($1, $3, "*"); $$ = $1;}
-	| expr DIVIDED_BY expr {doExpr($1, $3, "/"); $$ = $1;}
-	| expr MOD expr {doExpr($1, $3, "%"); $$ = $1;}
+	expr PLUS expr {$$ = doExpr($1, $3, "+");}
+	| expr MINUS expr {$$ = doExpr($1, $3, "-");}
+	| expr TIMES expr {$$ = doExpr($1, $3, "*");}
+	| expr DIVIDED_BY expr {$$ = doExpr($1, $3, "/");}
+	| expr MOD expr {$$ = doExpr($1, $3, "%");}
 	| OPEN_PAREN expr CLOSE_PAREN {$$ = $2;}
 	| VARNAME {$$ = getVarnameRegQ($1);} 
-	| INT {fprintf(fp, "\tR%i=%i;\n", currentReg, $1); $$ = currentReg; advanceRegister();}
-	| FLOAT {fprintf(fp, "\tRR%i=%f;\n", currentReg, $1); $$ = currentReg + 10; advanceFloatRegister();}
-	| STRING {$$ = getStringRegQ(removeQuotes($1)); advanceRegister();}
+	| INT {advanceRegister(); fprintf(fp, "\tR%i=%i;\n", currentReg, $1); $$ = currentReg;}
+	| FLOAT {advanceFloatRegister(); fprintf(fp, "\tRR%i=%f;\n", currentFloatReg, $1); $$ = currentFloatReg + 10; }
+	| STRING {advanceRegister(); $$ = getStringRegQ(removeQuotes($1)); }
 	//| listAccess
 	| function {$$ = $1;};
 
@@ -248,7 +254,8 @@ returnClause:
 	
 %%
 
-int main(int argc, char** argv) {	
+int main(int argc, char** argv) {
+	
 	stack = createStack(100);
 	fp = fopen("compiled.q.c", "w");
 	initQFile();
@@ -265,8 +272,33 @@ int main(int argc, char** argv) {
 }
 
 void advanceRegister(){
-	if (currentReg == 4) currentReg = 0;
-	else currentReg++;
+	if (currentReg == 4) {
+		currentReg = 0;
+		spillMode = 1;
+		localOffset += 4;
+		fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset);
+	}
+	else {
+		currentReg++;
+		if (spillMode) {
+			if (spilled[currentReg] != 0){				
+				spillRegs++;
+				localOffset += 4;
+				fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, currentReg);
+			}
+			spilled[currentReg] = 1;	
+		}
+	}
+}
+
+void reduceRegister(){
+	if (currentReg == 0) currentReg = 4;
+	else currentReg--;
+}
+
+void reduceLastRegSpilled(){
+	if (lastRegSpilled == 0) lastRegSpilled = 4;
+	else lastRegSpilled--;
 }
 
 void advanceFloatRegister(){
@@ -294,9 +326,37 @@ int varIsList(int type){
 	return (type == 3);
 }
 
-void doExpr(int r1, int r2, char* op){
-	if (r1 > 100 | r2 > 100) yyerror("No se puede operar con una lista. Pruebe a operar un elemento."); // 100 indica que hay una posición de lista base en R0 y cada número que sume es el tamaño de dicha lista (p. ej 105 indica una lista tamaño 5)
-	fprintf(fp, "\tR%i=R%i%sR%i;\n", r1, r1, op, r2); currentReg--; ////////// FALTA COMPROBAR TIPOS, SOLO PERMITIR FLOAT E INTS.
+int doExpr(int r1, int r2, char* op){
+	if (r1 > 100 || r2 > 100) yyerror("No se puede operar con una lista. Pruebe a operar un elemento."); // 100 indica que hay una posición de lista base en R0 y cada número que sume es el tamaño de dicha lista (p. ej 105 indica una lista tamaño 5)
+	else if (r1 < -9 || r2 < -9) yyerror("No se puede operar con una variable texto.");
+	else if (r1 > 9 && r2 > 9) {
+		fprintf(fp, "\tRR%i=RR%i%sRR%i;\n", r1-10, r1-10, op, r2-10); 
+		currentFloatReg--;
+	} else if (r1 > 9) {
+		fprintf(fp, "\tRR%i=RR%i%sR%i;\n", r1-10, r1-10, op, r2);
+		currentFloatReg--;
+	} else if (r2 > 9) {
+		fprintf(fp, "\tRR%i=R%i%sRR%i;\n", r2-10, r1, op, r2-10);
+		return r2;
+	} else {
+		fprintf(fp, "///////////%i\n", spillRegs);	
+		if (spillMode){		
+			if (lastRegSpilled == -1) lastRegSpilled = r2;
+			else if (r1 == lastRegSpilled){
+				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, localOffset);
+				localOffset -= 4;
+				spilled[r2] = 0;			
+				if (spillRegs > 0) {spillRegs--; reduceLastRegSpilled();}
+				else {
+					lastRegSpilled = -1;
+					spillMode = 0;
+				}
+			}
+		}
+		fprintf(fp, "\tR%i=R%i%sR%i;\n", r1, r1, op, r2); 
+		reduceRegister();
+	}
+	return r1;
 }	
 
 void initQFile(){	
@@ -311,8 +371,8 @@ void initQFile(){
 }
 
 void resetRegs(){
-	currentReg = 0;
-	currentFloatReg = 0;
+	currentReg = -1;
+	currentFloatReg = -1;
 }
 
 void initNumVarQ(char* varName, int reg){
@@ -393,19 +453,19 @@ int getVarnameRegQ(char* varName){
 	struct symbol s = getSymbol(varName);
 	if (isNotVar(s.type)) yyerror("La variable no existe.");
 	else if (varIsInt(s.type)){
+		advanceRegister();
 		fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
 		int reg = currentReg;
-		advanceRegister();
 		return reg;
 	} else if (varIsFloat(s.type)){
+		advanceFloatRegister();
 		fprintf(fp, "\tRR%i=F(R6-%i);\n", currentFloatReg, s.memDir);
 		int reg = currentFloatReg + 10;
-		advanceFloatRegister();
 		return reg;
 	} else if (varIsString(s.type)){
+		advanceRegister();
 		fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
 		int reg = currentReg - 10;
-		advanceRegister();
 		return reg;
 	} else if (varIsList(s.type)){
 		fprintf(fp, "\tR0=%i;\n", s.memDir);
@@ -483,7 +543,7 @@ void endFromQ(int label){
 }
 
 void initForeachQ(char* varName, int cod){
-	printf("%i", cod);
+	//printf("%i", cod);
 	if (cod < 100) yyerror("Solo se puede iterar sobre una variable tipo lista.");
 	else {
 		currentScope++;

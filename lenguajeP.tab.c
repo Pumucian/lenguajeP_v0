@@ -114,14 +114,20 @@
 	int nextLabel = 1;
 	int nextStatBlock = 1;
 	int emptyStringDir;
-	int currentReg = 0;
+	int currentReg = -1;
 	int currentFloatReg = 0;
 	int inFor = 0;
 	int listPosition;
+	int spillMode = 0;
+	int spillRegs = 0;
+	int lastRegSpilled = -1;
+	int spilled[5] = {1, 1, 1, 1, 1};
 
 	void advanceRegister();
+	void reduceRegister();
 	void advanceFloatRegister();
 	void reduceScope();
+	void reduceLastRegSpilled();
 
 	void initQFile();
 	void initTextQ(char* string);
@@ -146,7 +152,7 @@
 	int varIsList(int type);
 
 	void resetRegs();
-	void doExpr(int r1, int r2, char* op);	
+	int doExpr(int r1, int r2, char* op);	
 	void initNumVarQ(char* varName, int reg);
 	void initTextVarQ(char* varName, int reg);
 	void initListPositionQ(int reg);
@@ -171,7 +177,7 @@
 	void removeScope(struct Stack* stack);
 
 
-#line 175 "lenguajeP.tab.c" /* yacc.c:339  */
+#line 181 "lenguajeP.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -253,10 +259,10 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 110 "lenguajeP.y" /* yacc.c:355  */
+#line 116 "lenguajeP.y" /* yacc.c:355  */
 int entero; float real; char* string;
 
-#line 260 "lenguajeP.tab.c" /* yacc.c:355  */
+#line 266 "lenguajeP.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -273,7 +279,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 277 "lenguajeP.tab.c" /* yacc.c:358  */
+#line 283 "lenguajeP.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -574,12 +580,12 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   137,   137,   138,   141,   143,   144,   145,   146,   147,
-     148,   149,   152,   153,   154,   157,   159,   162,   163,   166,
-     166,   168,   168,   169,   196,   197,   198,   199,   200,   201,
-     202,   203,   204,   205,   207,   210,   211,   214,   214,   217,
-     218,   220,   221,   222,   223,   224,   225,   226,   229,   229,
-     229,   232,   232,   232,   239,   241,   242,   244,   247
+       0,   143,   143,   144,   147,   149,   150,   151,   152,   153,
+     154,   155,   158,   159,   160,   163,   165,   168,   169,   172,
+     172,   174,   174,   175,   202,   203,   204,   205,   206,   207,
+     208,   209,   210,   211,   213,   216,   217,   220,   220,   223,
+     224,   226,   227,   228,   229,   230,   231,   232,   235,   235,
+     235,   238,   238,   238,   245,   247,   248,   250,   253
 };
 #endif
 
@@ -1433,223 +1439,223 @@ yyreduce:
   switch (yyn)
     {
         case 15:
-#line 157 "lenguajeP.y" /* yacc.c:1646  */
+#line 163 "lenguajeP.y" /* yacc.c:1646  */
     {initNumVarQ((yyvsp[-2].string), (yyvsp[0].entero));}
-#line 1439 "lenguajeP.tab.c" /* yacc.c:1646  */
-    break;
-
-  case 16:
-#line 159 "lenguajeP.y" /* yacc.c:1646  */
-    {initTextVarQ((yyvsp[-2].string), (yyvsp[0].entero));}
 #line 1445 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 19:
-#line 166 "lenguajeP.y" /* yacc.c:1646  */
-    {struct symbol s; s = getSymbol((yyvsp[0].string)); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {(yyval.entero) = localOffset; listPosition = 0;}}
+  case 16:
+#line 165 "lenguajeP.y" /* yacc.c:1646  */
+    {initTextVarQ((yyvsp[-2].string), (yyvsp[0].entero));}
 #line 1451 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 20:
-#line 166 "lenguajeP.y" /* yacc.c:1646  */
-    {struct symbol s; s.memDir = (yyvsp[-2].entero); s.type = 3; s.name = (yyvsp[-3].string); s.scope = currentScope; s.size = listPosition; push(stack, s); localOffset += listPosition * 4; listPosition = 0;}
+  case 19:
+#line 172 "lenguajeP.y" /* yacc.c:1646  */
+    {struct symbol s; s = getSymbol((yyvsp[0].string)); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {(yyval.entero) = localOffset; listPosition = 0;}}
 #line 1457 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 21:
-#line 168 "lenguajeP.y" /* yacc.c:1646  */
-    {initListPositionQ((yyvsp[0].entero));}
+  case 20:
+#line 172 "lenguajeP.y" /* yacc.c:1646  */
+    {struct symbol s; s.memDir = (yyvsp[-2].entero); s.type = 3; s.name = (yyvsp[-3].string); s.scope = currentScope; s.size = listPosition; push(stack, s); localOffset += listPosition * 4; listPosition = 0;}
 #line 1463 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 23:
-#line 169 "lenguajeP.y" /* yacc.c:1646  */
-    {initListPositionQ((yyvsp[0].entero)); (yyval.entero) = 100 + listPosition; fprintf(fp, "\tR0=%i;\n", localOffset);}
+  case 21:
+#line 174 "lenguajeP.y" /* yacc.c:1646  */
+    {initListPositionQ((yyvsp[0].entero));}
 #line 1469 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 24:
-#line 196 "lenguajeP.y" /* yacc.c:1646  */
-    {doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "+"); (yyval.entero) = (yyvsp[-2].entero);}
+  case 23:
+#line 175 "lenguajeP.y" /* yacc.c:1646  */
+    {initListPositionQ((yyvsp[0].entero)); (yyval.entero) = 100 + listPosition; fprintf(fp, "\tR0=%i;\n", localOffset);}
 #line 1475 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 25:
-#line 197 "lenguajeP.y" /* yacc.c:1646  */
-    {doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "-"); (yyval.entero) = (yyvsp[-2].entero);}
+  case 24:
+#line 202 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "+");}
 #line 1481 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 26:
-#line 198 "lenguajeP.y" /* yacc.c:1646  */
-    {doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "*"); (yyval.entero) = (yyvsp[-2].entero);}
+  case 25:
+#line 203 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "-");}
 #line 1487 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 27:
-#line 199 "lenguajeP.y" /* yacc.c:1646  */
-    {doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "/"); (yyval.entero) = (yyvsp[-2].entero);}
+  case 26:
+#line 204 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "*");}
 #line 1493 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 28:
-#line 200 "lenguajeP.y" /* yacc.c:1646  */
-    {doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "%"); (yyval.entero) = (yyvsp[-2].entero);}
+  case 27:
+#line 205 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "/");}
 #line 1499 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 29:
-#line 201 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.entero) = (yyvsp[-1].entero);}
+  case 28:
+#line 206 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "%");}
 #line 1505 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 30:
-#line 202 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.entero) = getVarnameRegQ((yyvsp[0].string));}
+  case 29:
+#line 207 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = (yyvsp[-1].entero);}
 #line 1511 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 31:
-#line 203 "lenguajeP.y" /* yacc.c:1646  */
-    {fprintf(fp, "\tR%i=%i;\n", currentReg, (yyvsp[0].entero)); (yyval.entero) = currentReg; advanceRegister();}
+  case 30:
+#line 208 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = getVarnameRegQ((yyvsp[0].string));}
 #line 1517 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 32:
-#line 204 "lenguajeP.y" /* yacc.c:1646  */
-    {fprintf(fp, "\tRR%i=%f;\n", currentReg, (yyvsp[0].real)); (yyval.entero) = currentReg + 10; advanceFloatRegister();}
+  case 31:
+#line 209 "lenguajeP.y" /* yacc.c:1646  */
+    {advanceRegister(); fprintf(fp, "\tR%i=%i;\n", currentReg, (yyvsp[0].entero)); (yyval.entero) = currentReg;}
 #line 1523 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 33:
-#line 205 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.entero) = getStringRegQ(removeQuotes((yyvsp[0].string))); advanceRegister();}
+  case 32:
+#line 210 "lenguajeP.y" /* yacc.c:1646  */
+    {advanceFloatRegister(); fprintf(fp, "\tRR%i=%f;\n", currentFloatReg, (yyvsp[0].real)); (yyval.entero) = currentFloatReg + 10; }
 #line 1529 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 34:
-#line 207 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.entero) = (yyvsp[0].entero);}
+  case 33:
+#line 211 "lenguajeP.y" /* yacc.c:1646  */
+    {advanceRegister(); (yyval.entero) = getStringRegQ(removeQuotes((yyvsp[0].string))); }
 #line 1535 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 35:
-#line 210 "lenguajeP.y" /* yacc.c:1646  */
-    {printFromReg((yyvsp[0].entero));}
+  case 34:
+#line 213 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = (yyvsp[0].entero);}
 #line 1541 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 36:
-#line 211 "lenguajeP.y" /* yacc.c:1646  */
-    {printStringQ(emptyStringDir);}
+  case 35:
+#line 216 "lenguajeP.y" /* yacc.c:1646  */
+    {printFromReg((yyvsp[0].entero));}
 #line 1547 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 37:
-#line 214 "lenguajeP.y" /* yacc.c:1646  */
-    {processCondition((yyvsp[-4].entero), (yyvsp[-1].entero), (yyvsp[-2].string)); (yyval.entero) = nextLabel++; fprintf(fp, "\n\tIF(%sR0) GT(%i);\n", (yyvsp[-3].string), (yyval.entero)); resetRegs(); currentScope++;}
+  case 36:
+#line 217 "lenguajeP.y" /* yacc.c:1646  */
+    {printStringQ(emptyStringDir);}
 #line 1553 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 38:
-#line 214 "lenguajeP.y" /* yacc.c:1646  */
-    {fprintf(fp, "L %i:\n", (yyvsp[-2].entero)); removeScope(stack); resetRegs();}
+  case 37:
+#line 220 "lenguajeP.y" /* yacc.c:1646  */
+    {processCondition((yyvsp[-4].entero), (yyvsp[-1].entero), (yyvsp[-2].string)); (yyval.entero) = nextLabel++; fprintf(fp, "\n\tIF(%sR0) GT(%i);\n", (yyvsp[-3].string), (yyval.entero)); resetRegs(); currentScope++;}
 #line 1559 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 39:
-#line 217 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = "";}
+  case 38:
+#line 220 "lenguajeP.y" /* yacc.c:1646  */
+    {fprintf(fp, "L %i:\n", (yyvsp[-2].entero)); removeScope(stack); resetRegs();}
 #line 1565 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 40:
-#line 218 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = "!";}
+  case 39:
+#line 223 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = "";}
 #line 1571 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 41:
-#line 220 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = ">";}
+  case 40:
+#line 224 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = "!";}
 #line 1577 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 42:
-#line 221 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = "<";}
+  case 41:
+#line 226 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = ">";}
 #line 1583 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 43:
-#line 222 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = "==";}
+  case 42:
+#line 227 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = "<";}
 #line 1589 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 44:
-#line 223 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = ">=";}
+  case 43:
+#line 228 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = "==";}
 #line 1595 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 45:
-#line 224 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = "<=";}
+  case 44:
+#line 229 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = ">=";}
 #line 1601 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 46:
-#line 225 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = "==";}
+  case 45:
+#line 230 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = "<=";}
 #line 1607 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 47:
-#line 226 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.string) = "!=";}
+  case 46:
+#line 231 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = "==";}
 #line 1613 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 48:
-#line 229 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.entero) = nextLabel; initFromQ((yyvsp[-2].entero), (yyvsp[0].entero));}
+  case 47:
+#line 232 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.string) = "!=";}
 #line 1619 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 49:
-#line 229 "lenguajeP.y" /* yacc.c:1646  */
-    {endFromQ((yyvsp[-2].entero));}
+  case 48:
+#line 235 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = nextLabel; initFromQ((yyvsp[-2].entero), (yyvsp[0].entero));}
 #line 1625 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 50:
-#line 229 "lenguajeP.y" /* yacc.c:1646  */
-    {}
+  case 49:
+#line 235 "lenguajeP.y" /* yacc.c:1646  */
+    {endFromQ((yyvsp[-2].entero));}
 #line 1631 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 51:
-#line 232 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.entero) = nextLabel; initForeachQ((yyvsp[-2].string), (yyvsp[0].entero));}
+  case 50:
+#line 235 "lenguajeP.y" /* yacc.c:1646  */
+    {}
 #line 1637 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 52:
-#line 232 "lenguajeP.y" /* yacc.c:1646  */
-    {endForeachQ((yyvsp[-2].entero));}
+  case 51:
+#line 238 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = nextLabel; initForeachQ((yyvsp[-2].string), (yyvsp[0].entero));}
 #line 1643 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 57:
-#line 244 "lenguajeP.y" /* yacc.c:1646  */
-    {(yyval.entero) = 0;}
+  case 52:
+#line 238 "lenguajeP.y" /* yacc.c:1646  */
+    {endForeachQ((yyvsp[-2].entero));}
 #line 1649 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
+  case 57:
+#line 250 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = 0;}
+#line 1655 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
 
-#line 1653 "lenguajeP.tab.c" /* yacc.c:1646  */
+
+#line 1659 "lenguajeP.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1877,10 +1883,11 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 249 "lenguajeP.y" /* yacc.c:1906  */
+#line 255 "lenguajeP.y" /* yacc.c:1906  */
 
 
-int main(int argc, char** argv) {	
+int main(int argc, char** argv) {
+	
 	stack = createStack(100);
 	fp = fopen("compiled.q.c", "w");
 	initQFile();
@@ -1897,8 +1904,33 @@ int main(int argc, char** argv) {
 }
 
 void advanceRegister(){
-	if (currentReg == 4) currentReg = 0;
-	else currentReg++;
+	if (currentReg == 4) {
+		currentReg = 0;
+		spillMode = 1;
+		localOffset += 4;
+		fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset);
+	}
+	else {
+		currentReg++;
+		if (spillMode) {
+			if (spilled[currentReg] != 0){				
+				spillRegs++;
+				localOffset += 4;
+				fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, currentReg);
+			}
+			spilled[currentReg]++;	
+		}
+	}
+}
+
+void reduceRegister(){
+	if (currentReg == 0) currentReg = 4;
+	else currentReg--;
+}
+
+void reduceLastRegSpilled(){
+	if (lastRegSpilled == 0) lastRegSpilled = 4;
+	else lastRegSpilled--;
 }
 
 void advanceFloatRegister(){
@@ -1926,9 +1958,37 @@ int varIsList(int type){
 	return (type == 3);
 }
 
-void doExpr(int r1, int r2, char* op){
-	if (r1 > 100 | r2 > 100) yyerror("No se puede operar con una lista. Pruebe a operar un elemento."); // 100 indica que hay una posición de lista base en R0 y cada número que sume es el tamaño de dicha lista (p. ej 105 indica una lista tamaño 5)
-	fprintf(fp, "\tR%i=R%i%sR%i;\n", r1, r1, op, r2); currentReg--; ////////// FALTA COMPROBAR TIPOS, SOLO PERMITIR FLOAT E INTS.
+int doExpr(int r1, int r2, char* op){
+	if (r1 > 100 || r2 > 100) yyerror("No se puede operar con una lista. Pruebe a operar un elemento."); // 100 indica que hay una posición de lista base en R0 y cada número que sume es el tamaño de dicha lista (p. ej 105 indica una lista tamaño 5)
+	else if (r1 < -9 || r2 < -9) yyerror("No se puede operar con una variable texto.");
+	else if (r1 > 9 && r2 > 9) {
+		fprintf(fp, "\tRR%i=RR%i%sRR%i;\n", r1-10, r1-10, op, r2-10); 
+		currentFloatReg--;
+	} else if (r1 > 9) {
+		fprintf(fp, "\tRR%i=RR%i%sR%i;\n", r1-10, r1-10, op, r2);
+		currentFloatReg--;
+	} else if (r2 > 9) {
+		fprintf(fp, "\tRR%i=R%i%sRR%i;\n", r2-10, r1, op, r2-10);
+		return r2;
+	} else {
+		fprintf(fp, "///////////%i\n", spillRegs);	
+		if (spillMode){		
+			if (lastRegSpilled == -1) lastRegSpilled = r2;
+			else if (r1 == lastRegSpilled){
+				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, localOffset);
+				localOffset -= 4;
+				spilled[r2] = 0;			
+				if (spillRegs > 0) {spillRegs--; reduceLastRegSpilled();}
+				else {
+					lastRegSpilled = -1;
+					spillMode = 0;
+				}
+			}
+		}
+		fprintf(fp, "\tR%i=R%i%sR%i;\n", r1, r1, op, r2); 
+		reduceRegister();
+	}
+	return r1;
 }	
 
 void initQFile(){	
@@ -1943,8 +2003,8 @@ void initQFile(){
 }
 
 void resetRegs(){
-	currentReg = 0;
-	currentFloatReg = 0;
+	currentReg = -1;
+	currentFloatReg = -1;
 }
 
 void initNumVarQ(char* varName, int reg){
@@ -2025,19 +2085,19 @@ int getVarnameRegQ(char* varName){
 	struct symbol s = getSymbol(varName);
 	if (isNotVar(s.type)) yyerror("La variable no existe.");
 	else if (varIsInt(s.type)){
+		advanceRegister();
 		fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
 		int reg = currentReg;
-		advanceRegister();
 		return reg;
 	} else if (varIsFloat(s.type)){
+		advanceFloatRegister();
 		fprintf(fp, "\tRR%i=F(R6-%i);\n", currentFloatReg, s.memDir);
 		int reg = currentFloatReg + 10;
-		advanceFloatRegister();
 		return reg;
 	} else if (varIsString(s.type)){
+		advanceRegister();
 		fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
 		int reg = currentReg - 10;
-		advanceRegister();
 		return reg;
 	} else if (varIsList(s.type)){
 		fprintf(fp, "\tR0=%i;\n", s.memDir);
@@ -2115,7 +2175,7 @@ void endFromQ(int label){
 }
 
 void initForeachQ(char* varName, int cod){
-	printf("%i", cod);
+	//printf("%i", cod);
 	if (cod < 100) yyerror("Solo se puede iterar sobre una variable tipo lista.");
 	else {
 		currentScope++;
@@ -2158,7 +2218,7 @@ void endForeachQ(int label){
 	removeScope(stack);
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hacia abajo es código viejo que hay que limpiar
 
 void initTextQ(char* string){
 	fprintf(fp, "STAT(%i)\n", nextStatBlock);
