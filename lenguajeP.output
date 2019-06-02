@@ -89,20 +89,37 @@ Gramática
 
    56 listAccess: VARNAME OPEN_BRACKET expr CLOSE_BRACKET
 
-   57 initFunction: FUNC function lenguajeP ENDFUNC
+   57 @8: %empty
 
-   58 funcParam: VARNAME ',' funcParam
-   59          | VARNAME
+   58 $@9: %empty
 
-   60 function: VARNAME OPEN_PAREN funcParam CLOSE_PAREN
+   59 $@10: %empty
 
-   61 returnClause: RETURN expr
+   60 initFunction: FUNC VARNAME @8 OPEN_PAREN funcParam CLOSE_PAREN $@9 lenguajeP $@10 ENDFUNC
+
+   61 $@11: %empty
+
+   62 funcParam: VARNAME $@11 ',' funcParam
+   63          | VARNAME
+
+   64 @12: %empty
+
+   65 $@13: %empty
+
+   66 function: VARNAME OPEN_PAREN @12 assignParams $@13 CLOSE_PAREN
+
+   67 $@14: %empty
+
+   68 assignParams: expr $@14 ","
+   69             | expr
+
+   70 returnClause: RETURN expr
 
 
 Terminales con las reglas donde aparecen
 
 $end (0) 0
-',' (44) 22 58
+',' (44) 22 62
 '=' (61) 18
 error (256)
 TEXT (258) 16
@@ -115,7 +132,7 @@ DIVIDED_BY (264) 28
 MOD (265) 29
 INT (266) 33
 FLOAT (267) 34
-VARNAME (268) 15 16 20 24 32 55 56 58 59 60
+VARNAME (268) 15 16 20 24 32 55 56 60 62 63 66
 STRING (269) 35
 IS (270) 17 45
 IF (271) 40
@@ -124,7 +141,7 @@ FROM (273) 52
 TO (274) 52
 DO (275) 52 55
 DONE (276) 40 52 55
-ENDFUNC (277) 57
+ENDFUNC (277) 60
 SHOW (278) 37 38
 TAB (279)
 NOT (280) 41
@@ -138,75 +155,92 @@ AND (287)
 OR (288)
 FOREACH (289) 55
 IN (290) 55
-FUNC (291) 57
-RETURN (292) 61
+FUNC (291) 60
+RETURN (292) 70
 OPEN_BRACKET (293) 56
 CLOSE_BRACKET (294) 56
-OPEN_PAREN (295) 30 60
-CLOSE_PAREN (296) 30 60
+OPEN_PAREN (295) 30 60 66
+CLOSE_PAREN (296) 30 60 66
+"," (297) 68
 
 
 No terminales con las reglas donde aparecen
 
-$accept (44)
+$accept (45)
     en la izquierda: 0
-lenguajeP (45)
-    en la izquierda: 1 2, en la derecha: 0 1 40 52 55 57
-line (46)
+lenguajeP (46)
+    en la izquierda: 1 2, en la derecha: 0 1 40 52 55 60
+line (47)
     en la izquierda: 3 4 5 6 7 8 9 10 11, en la derecha: 1
-init (47)
+init (48)
     en la izquierda: 12 13 14, en la derecha: 3
-initNum (48)
+initNum (49)
     en la izquierda: 15, en la derecha: 12
-initText (49)
+initText (50)
     en la izquierda: 16, en la derecha: 13
-asignator (50)
+asignator (51)
     en la izquierda: 17 18, en la derecha: 15 16 20 24
-initList (51)
+initList (52)
     en la izquierda: 20, en la derecha: 14
-@1 (52)
+@1 (53)
     en la izquierda: 19, en la derecha: 20
-numList (53)
+numList (54)
     en la izquierda: 22 23, en la derecha: 20 22
-$@2 (54)
+$@2 (55)
     en la izquierda: 21, en la derecha: 22
-assign (55)
+assign (56)
     en la izquierda: 24, en la derecha: 4
-expr (56)
+expr (57)
     en la izquierda: 25 26 27 28 29 30 31 32 33 34 35 36, en la derecha:
-    15 16 22 23 24 25 26 27 28 29 30 37 40 52 55 56 61
-show (57)
+    15 16 22 23 24 25 26 27 28 29 30 37 40 52 55 56 68 69 70
+show (58)
     en la izquierda: 37 38, en la derecha: 5
-ifClause (58)
+ifClause (59)
     en la izquierda: 40, en la derecha: 6
-@3 (59)
+@3 (60)
     en la izquierda: 39, en la derecha: 40
-negation (60)
+negation (61)
     en la izquierda: 41 42, en la derecha: 40
-comparator (61)
+comparator (62)
     en la izquierda: 43 44 45 46 47 48 49, en la derecha: 40
-fromClause (62)
+fromClause (63)
     en la izquierda: 52, en la derecha: 7
-@4 (63)
+@4 (64)
     en la izquierda: 50, en la derecha: 52
-$@5 (64)
+$@5 (65)
     en la izquierda: 51, en la derecha: 52
-foreachClause (65)
+foreachClause (66)
     en la izquierda: 55, en la derecha: 9
-@6 (66)
+@6 (67)
     en la izquierda: 53, en la derecha: 55
-$@7 (67)
+$@7 (68)
     en la izquierda: 54, en la derecha: 55
-listAccess (68)
+listAccess (69)
     en la izquierda: 56, en la derecha: 31
-initFunction (69)
-    en la izquierda: 57, en la derecha: 8
-funcParam (70)
-    en la izquierda: 58 59, en la derecha: 58 60
-function (71)
-    en la izquierda: 60, en la derecha: 11 36 57
-returnClause (72)
-    en la izquierda: 61, en la derecha: 10
+initFunction (70)
+    en la izquierda: 60, en la derecha: 8
+@8 (71)
+    en la izquierda: 57, en la derecha: 60
+$@9 (72)
+    en la izquierda: 58, en la derecha: 60
+$@10 (73)
+    en la izquierda: 59, en la derecha: 60
+funcParam (74)
+    en la izquierda: 62 63, en la derecha: 60 62
+$@11 (75)
+    en la izquierda: 61, en la derecha: 62
+function (76)
+    en la izquierda: 66, en la derecha: 11 36
+@12 (77)
+    en la izquierda: 64, en la derecha: 66
+$@13 (78)
+    en la izquierda: 65, en la derecha: 66
+assignParams (79)
+    en la izquierda: 68 69, en la derecha: 66
+$@14 (80)
+    en la izquierda: 67, en la derecha: 68
+returnClause (81)
+    en la izquierda: 70, en la derecha: 10
 
 
 Estado 0
@@ -281,7 +315,7 @@ Estado 5
 Estado 6
 
    24 assign: VARNAME . asignator expr
-   60 function: VARNAME . OPEN_PAREN funcParam CLOSE_PAREN
+   66 function: VARNAME . OPEN_PAREN @12 assignParams $@13 CLOSE_PAREN
 
     IS          desplazar e ir al estado 29
     OPEN_PAREN  desplazar e ir al estado 30
@@ -347,16 +381,14 @@ Estado 10
 
 Estado 11
 
-   57 initFunction: FUNC . function lenguajeP ENDFUNC
+   60 initFunction: FUNC . VARNAME @8 OPEN_PAREN funcParam CLOSE_PAREN $@9 lenguajeP $@10 ENDFUNC
 
     VARNAME  desplazar e ir al estado 44
-
-    function  ir al estado 45
 
 
 Estado 12
 
-   61 returnClause: RETURN . expr
+   70 returnClause: RETURN . expr
 
     INT         desplazar e ir al estado 33
     FLOAT       desplazar e ir al estado 34
@@ -364,7 +396,7 @@ Estado 12
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    expr        ir al estado 46
+    expr        ir al estado 45
     listAccess  ir al estado 39
     function    ir al estado 40
 
@@ -467,7 +499,7 @@ Estado 26
     IS   desplazar e ir al estado 29
     '='  desplazar e ir al estado 31
 
-    asignator  ir al estado 47
+    asignator  ir al estado 46
 
 
 Estado 27
@@ -477,14 +509,14 @@ Estado 27
     IS   desplazar e ir al estado 29
     '='  desplazar e ir al estado 31
 
-    asignator  ir al estado 48
+    asignator  ir al estado 47
 
 
 Estado 28
 
    20 initList: LIST NUM . VARNAME @1 asignator numList
 
-    VARNAME  desplazar e ir al estado 49
+    VARNAME  desplazar e ir al estado 48
 
 
 Estado 29
@@ -496,11 +528,11 @@ Estado 29
 
 Estado 30
 
-   60 function: VARNAME OPEN_PAREN . funcParam CLOSE_PAREN
+   66 function: VARNAME OPEN_PAREN . @12 assignParams $@13 CLOSE_PAREN
 
-    VARNAME  desplazar e ir al estado 50
+    $default  reduce usando la regla 64 (@12)
 
-    funcParam  ir al estado 51
+    @12  ir al estado 49
 
 
 Estado 31
@@ -520,7 +552,7 @@ Estado 32
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    expr        ir al estado 52
+    expr        ir al estado 50
     listAccess  ir al estado 39
     function    ir al estado 40
 
@@ -543,9 +575,9 @@ Estado 35
 
    32 expr: VARNAME .
    56 listAccess: VARNAME . OPEN_BRACKET expr CLOSE_BRACKET
-   60 function: VARNAME . OPEN_PAREN funcParam CLOSE_PAREN
+   66 function: VARNAME . OPEN_PAREN @12 assignParams $@13 CLOSE_PAREN
 
-    OPEN_BRACKET  desplazar e ir al estado 53
+    OPEN_BRACKET  desplazar e ir al estado 51
     OPEN_PAREN    desplazar e ir al estado 30
 
     $default  reduce usando la regla 32 (expr)
@@ -568,7 +600,7 @@ Estado 37
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    expr        ir al estado 54
+    expr        ir al estado 52
     listAccess  ir al estado 39
     function    ir al estado 40
 
@@ -582,16 +614,16 @@ Estado 38
    29     | expr . MOD expr
    40 ifClause: IF expr . negation comparator expr THEN @3 lenguajeP DONE
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
-    NOT         desplazar e ir al estado 60
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
+    NOT         desplazar e ir al estado 58
 
     $default  reduce usando la regla 42 (negation)
 
-    negation  ir al estado 61
+    negation  ir al estado 59
 
 
 Estado 39
@@ -617,12 +649,12 @@ Estado 41
    29     | expr . MOD expr
    52 fromClause: FROM expr . TO expr @4 DO lenguajeP $@5 DONE
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
-    TO          desplazar e ir al estado 62
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
+    TO          desplazar e ir al estado 60
 
 
 Estado 42
@@ -634,11 +666,11 @@ Estado 42
    29     | expr . MOD expr
    37 show: SHOW expr .
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     $default  reduce usando la regla 37 (show)
 
@@ -647,44 +679,37 @@ Estado 43
 
    55 foreachClause: FOREACH VARNAME . IN expr @6 DO lenguajeP $@7 DONE
 
-    IN  desplazar e ir al estado 63
+    IN  desplazar e ir al estado 61
 
 
 Estado 44
 
-   60 function: VARNAME . OPEN_PAREN funcParam CLOSE_PAREN
+   60 initFunction: FUNC VARNAME . @8 OPEN_PAREN funcParam CLOSE_PAREN $@9 lenguajeP $@10 ENDFUNC
 
-    OPEN_PAREN  desplazar e ir al estado 30
+    $default  reduce usando la regla 57 (@8)
+
+    @8  ir al estado 62
 
 
 Estado 45
-
-   57 initFunction: FUNC function . lenguajeP ENDFUNC
-
-    $default  reduce usando la regla 2 (lenguajeP)
-
-    lenguajeP  ir al estado 64
-
-
-Estado 46
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
    27     | expr . TIMES expr
    28     | expr . DIVIDED_BY expr
    29     | expr . MOD expr
-   61 returnClause: RETURN expr .
+   70 returnClause: RETURN expr .
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
-    $default  reduce usando la regla 61 (returnClause)
+    $default  reduce usando la regla 70 (returnClause)
 
 
-Estado 47
+Estado 46
 
    16 initText: TEXT VARNAME asignator . expr
 
@@ -694,12 +719,12 @@ Estado 47
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    expr        ir al estado 65
+    expr        ir al estado 63
     listAccess  ir al estado 39
     function    ir al estado 40
 
 
-Estado 48
+Estado 47
 
    15 initNum: NUM VARNAME asignator . expr
 
@@ -709,38 +734,37 @@ Estado 48
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    expr        ir al estado 66
+    expr        ir al estado 64
     listAccess  ir al estado 39
     function    ir al estado 40
 
 
-Estado 49
+Estado 48
 
    20 initList: LIST NUM VARNAME . @1 asignator numList
 
     $default  reduce usando la regla 19 (@1)
 
-    @1  ir al estado 67
+    @1  ir al estado 65
+
+
+Estado 49
+
+   66 function: VARNAME OPEN_PAREN @12 . assignParams $@13 CLOSE_PAREN
+
+    INT         desplazar e ir al estado 33
+    FLOAT       desplazar e ir al estado 34
+    VARNAME     desplazar e ir al estado 35
+    STRING      desplazar e ir al estado 36
+    OPEN_PAREN  desplazar e ir al estado 37
+
+    expr          ir al estado 66
+    listAccess    ir al estado 39
+    function      ir al estado 40
+    assignParams  ir al estado 67
 
 
 Estado 50
-
-   58 funcParam: VARNAME . ',' funcParam
-   59          | VARNAME .
-
-    ','  desplazar e ir al estado 68
-
-    $default  reduce usando la regla 59 (funcParam)
-
-
-Estado 51
-
-   60 function: VARNAME OPEN_PAREN funcParam . CLOSE_PAREN
-
-    CLOSE_PAREN  desplazar e ir al estado 69
-
-
-Estado 52
 
    24 assign: VARNAME asignator expr .
    25 expr: expr . PLUS expr
@@ -749,18 +773,50 @@ Estado 52
    28     | expr . DIVIDED_BY expr
    29     | expr . MOD expr
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     $default  reduce usando la regla 24 (assign)
 
 
-Estado 53
+Estado 51
 
    56 listAccess: VARNAME OPEN_BRACKET . expr CLOSE_BRACKET
+
+    INT         desplazar e ir al estado 33
+    FLOAT       desplazar e ir al estado 34
+    VARNAME     desplazar e ir al estado 35
+    STRING      desplazar e ir al estado 36
+    OPEN_PAREN  desplazar e ir al estado 37
+
+    expr        ir al estado 68
+    listAccess  ir al estado 39
+    function    ir al estado 40
+
+
+Estado 52
+
+   25 expr: expr . PLUS expr
+   26     | expr . MINUS expr
+   27     | expr . TIMES expr
+   28     | expr . DIVIDED_BY expr
+   29     | expr . MOD expr
+   30     | OPEN_PAREN expr . CLOSE_PAREN
+
+    PLUS         desplazar e ir al estado 53
+    MINUS        desplazar e ir al estado 54
+    TIMES        desplazar e ir al estado 55
+    DIVIDED_BY   desplazar e ir al estado 56
+    MOD          desplazar e ir al estado 57
+    CLOSE_PAREN  desplazar e ir al estado 69
+
+
+Estado 53
+
+   25 expr: expr PLUS . expr
 
     INT         desplazar e ir al estado 33
     FLOAT       desplazar e ir al estado 34
@@ -775,24 +831,22 @@ Estado 53
 
 Estado 54
 
-   25 expr: expr . PLUS expr
-   26     | expr . MINUS expr
-   27     | expr . TIMES expr
-   28     | expr . DIVIDED_BY expr
-   29     | expr . MOD expr
-   30     | OPEN_PAREN expr . CLOSE_PAREN
+   26 expr: expr MINUS . expr
 
-    PLUS         desplazar e ir al estado 55
-    MINUS        desplazar e ir al estado 56
-    TIMES        desplazar e ir al estado 57
-    DIVIDED_BY   desplazar e ir al estado 58
-    MOD          desplazar e ir al estado 59
-    CLOSE_PAREN  desplazar e ir al estado 71
+    INT         desplazar e ir al estado 33
+    FLOAT       desplazar e ir al estado 34
+    VARNAME     desplazar e ir al estado 35
+    STRING      desplazar e ir al estado 36
+    OPEN_PAREN  desplazar e ir al estado 37
+
+    expr        ir al estado 71
+    listAccess  ir al estado 39
+    function    ir al estado 40
 
 
 Estado 55
 
-   25 expr: expr PLUS . expr
+   27 expr: expr TIMES . expr
 
     INT         desplazar e ir al estado 33
     FLOAT       desplazar e ir al estado 34
@@ -807,7 +861,7 @@ Estado 55
 
 Estado 56
 
-   26 expr: expr MINUS . expr
+   28 expr: expr DIVIDED_BY . expr
 
     INT         desplazar e ir al estado 33
     FLOAT       desplazar e ir al estado 34
@@ -822,7 +876,7 @@ Estado 56
 
 Estado 57
 
-   27 expr: expr TIMES . expr
+   29 expr: expr MOD . expr
 
     INT         desplazar e ir al estado 33
     FLOAT       desplazar e ir al estado 34
@@ -837,57 +891,27 @@ Estado 57
 
 Estado 58
 
-   28 expr: expr DIVIDED_BY . expr
-
-    INT         desplazar e ir al estado 33
-    FLOAT       desplazar e ir al estado 34
-    VARNAME     desplazar e ir al estado 35
-    STRING      desplazar e ir al estado 36
-    OPEN_PAREN  desplazar e ir al estado 37
-
-    expr        ir al estado 75
-    listAccess  ir al estado 39
-    function    ir al estado 40
-
-
-Estado 59
-
-   29 expr: expr MOD . expr
-
-    INT         desplazar e ir al estado 33
-    FLOAT       desplazar e ir al estado 34
-    VARNAME     desplazar e ir al estado 35
-    STRING      desplazar e ir al estado 36
-    OPEN_PAREN  desplazar e ir al estado 37
-
-    expr        ir al estado 76
-    listAccess  ir al estado 39
-    function    ir al estado 40
-
-
-Estado 60
-
    41 negation: NOT .
 
     $default  reduce usando la regla 41 (negation)
 
 
-Estado 61
+Estado 59
 
    40 ifClause: IF expr negation . comparator expr THEN @3 lenguajeP DONE
 
-    IS          desplazar e ir al estado 77
-    GREATER     desplazar e ir al estado 78
-    LOWER       desplazar e ir al estado 79
-    GEQUALS     desplazar e ir al estado 80
-    LEQUALS     desplazar e ir al estado 81
-    EQUALS      desplazar e ir al estado 82
-    NOT_EQUALS  desplazar e ir al estado 83
+    IS          desplazar e ir al estado 75
+    GREATER     desplazar e ir al estado 76
+    LOWER       desplazar e ir al estado 77
+    GEQUALS     desplazar e ir al estado 78
+    LEQUALS     desplazar e ir al estado 79
+    EQUALS      desplazar e ir al estado 80
+    NOT_EQUALS  desplazar e ir al estado 81
 
-    comparator  ir al estado 84
+    comparator  ir al estado 82
 
 
-Estado 62
+Estado 60
 
    52 fromClause: FROM expr TO . expr @4 DO lenguajeP $@5 DONE
 
@@ -897,12 +921,12 @@ Estado 62
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    expr        ir al estado 85
+    expr        ir al estado 83
     listAccess  ir al estado 39
     function    ir al estado 40
 
 
-Estado 63
+Estado 61
 
    55 foreachClause: FOREACH VARNAME IN . expr @6 DO lenguajeP $@7 DONE
 
@@ -912,44 +936,19 @@ Estado 63
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    expr        ir al estado 86
+    expr        ir al estado 84
     listAccess  ir al estado 39
     function    ir al estado 40
 
 
-Estado 64
+Estado 62
 
-    1 lenguajeP: lenguajeP . line
-   57 initFunction: FUNC function lenguajeP . ENDFUNC
+   60 initFunction: FUNC VARNAME @8 . OPEN_PAREN funcParam CLOSE_PAREN $@9 lenguajeP $@10 ENDFUNC
 
-    TEXT     desplazar e ir al estado 3
-    NUM      desplazar e ir al estado 4
-    LIST     desplazar e ir al estado 5
-    VARNAME  desplazar e ir al estado 6
-    IF       desplazar e ir al estado 7
-    FROM     desplazar e ir al estado 8
-    ENDFUNC  desplazar e ir al estado 87
-    SHOW     desplazar e ir al estado 9
-    FOREACH  desplazar e ir al estado 10
-    FUNC     desplazar e ir al estado 11
-    RETURN   desplazar e ir al estado 12
-
-    line           ir al estado 13
-    init           ir al estado 14
-    initNum        ir al estado 15
-    initText       ir al estado 16
-    initList       ir al estado 17
-    assign         ir al estado 18
-    show           ir al estado 19
-    ifClause       ir al estado 20
-    fromClause     ir al estado 21
-    foreachClause  ir al estado 22
-    initFunction   ir al estado 23
-    function       ir al estado 24
-    returnClause   ir al estado 25
+    OPEN_PAREN  desplazar e ir al estado 85
 
 
-Estado 65
+Estado 63
 
    16 initText: TEXT VARNAME asignator expr .
    25 expr: expr . PLUS expr
@@ -958,16 +957,16 @@ Estado 65
    28     | expr . DIVIDED_BY expr
    29     | expr . MOD expr
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     $default  reduce usando la regla 16 (initText)
 
 
-Estado 66
+Estado 64
 
    15 initNum: NUM VARNAME asignator expr .
    25 expr: expr . PLUS expr
@@ -976,42 +975,57 @@ Estado 66
    28     | expr . DIVIDED_BY expr
    29     | expr . MOD expr
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     $default  reduce usando la regla 15 (initNum)
 
 
-Estado 67
+Estado 65
 
    20 initList: LIST NUM VARNAME @1 . asignator numList
 
     IS   desplazar e ir al estado 29
     '='  desplazar e ir al estado 31
 
-    asignator  ir al estado 88
+    asignator  ir al estado 86
+
+
+Estado 66
+
+   25 expr: expr . PLUS expr
+   26     | expr . MINUS expr
+   27     | expr . TIMES expr
+   28     | expr . DIVIDED_BY expr
+   29     | expr . MOD expr
+   68 assignParams: expr . $@14 ","
+   69             | expr .
+
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
+
+    CLOSE_PAREN  reduce usando la regla 69 (assignParams)
+    $default     reduce usando la regla 67 ($@14)
+
+    $@14  ir al estado 87
+
+
+Estado 67
+
+   66 function: VARNAME OPEN_PAREN @12 assignParams . $@13 CLOSE_PAREN
+
+    $default  reduce usando la regla 65 ($@13)
+
+    $@13  ir al estado 88
 
 
 Estado 68
-
-   58 funcParam: VARNAME ',' . funcParam
-
-    VARNAME  desplazar e ir al estado 50
-
-    funcParam  ir al estado 89
-
-
-Estado 69
-
-   60 function: VARNAME OPEN_PAREN funcParam CLOSE_PAREN .
-
-    $default  reduce usando la regla 60 (function)
-
-
-Estado 70
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
@@ -1020,22 +1034,22 @@ Estado 70
    29     | expr . MOD expr
    56 listAccess: VARNAME OPEN_BRACKET expr . CLOSE_BRACKET
 
-    PLUS           desplazar e ir al estado 55
-    MINUS          desplazar e ir al estado 56
-    TIMES          desplazar e ir al estado 57
-    DIVIDED_BY     desplazar e ir al estado 58
-    MOD            desplazar e ir al estado 59
-    CLOSE_BRACKET  desplazar e ir al estado 90
+    PLUS           desplazar e ir al estado 53
+    MINUS          desplazar e ir al estado 54
+    TIMES          desplazar e ir al estado 55
+    DIVIDED_BY     desplazar e ir al estado 56
+    MOD            desplazar e ir al estado 57
+    CLOSE_BRACKET  desplazar e ir al estado 89
 
 
-Estado 71
+Estado 69
 
    30 expr: OPEN_PAREN expr CLOSE_PAREN .
 
     $default  reduce usando la regla 30 (expr)
 
 
-Estado 72
+Estado 70
 
    25 expr: expr . PLUS expr
    25     | expr PLUS expr .
@@ -1044,14 +1058,14 @@ Estado 72
    28     | expr . DIVIDED_BY expr
    29     | expr . MOD expr
 
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     $default  reduce usando la regla 25 (expr)
 
 
-Estado 73
+Estado 71
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
@@ -1060,14 +1074,14 @@ Estado 73
    28     | expr . DIVIDED_BY expr
    29     | expr . MOD expr
 
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     $default  reduce usando la regla 26 (expr)
 
 
-Estado 74
+Estado 72
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
@@ -1079,7 +1093,7 @@ Estado 74
     $default  reduce usando la regla 27 (expr)
 
 
-Estado 75
+Estado 73
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
@@ -1091,7 +1105,7 @@ Estado 75
     $default  reduce usando la regla 28 (expr)
 
 
-Estado 76
+Estado 74
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
@@ -1103,56 +1117,56 @@ Estado 76
     $default  reduce usando la regla 29 (expr)
 
 
-Estado 77
+Estado 75
 
    45 comparator: IS .
 
     $default  reduce usando la regla 45 (comparator)
 
 
-Estado 78
+Estado 76
 
    43 comparator: GREATER .
 
     $default  reduce usando la regla 43 (comparator)
 
 
-Estado 79
+Estado 77
 
    44 comparator: LOWER .
 
     $default  reduce usando la regla 44 (comparator)
 
 
-Estado 80
+Estado 78
 
    46 comparator: GEQUALS .
 
     $default  reduce usando la regla 46 (comparator)
 
 
-Estado 81
+Estado 79
 
    47 comparator: LEQUALS .
 
     $default  reduce usando la regla 47 (comparator)
 
 
-Estado 82
+Estado 80
 
    48 comparator: EQUALS .
 
     $default  reduce usando la regla 48 (comparator)
 
 
-Estado 83
+Estado 81
 
    49 comparator: NOT_EQUALS .
 
     $default  reduce usando la regla 49 (comparator)
 
 
-Estado 84
+Estado 82
 
    40 ifClause: IF expr negation comparator . expr THEN @3 lenguajeP DONE
 
@@ -1162,12 +1176,12 @@ Estado 84
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    expr        ir al estado 91
+    expr        ir al estado 90
     listAccess  ir al estado 39
     function    ir al estado 40
 
 
-Estado 85
+Estado 83
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
@@ -1176,18 +1190,18 @@ Estado 85
    29     | expr . MOD expr
    52 fromClause: FROM expr TO expr . @4 DO lenguajeP $@5 DONE
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     $default  reduce usando la regla 50 (@4)
 
-    @4  ir al estado 92
+    @4  ir al estado 91
 
 
-Estado 86
+Estado 84
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
@@ -1196,25 +1210,27 @@ Estado 86
    29     | expr . MOD expr
    55 foreachClause: FOREACH VARNAME IN expr . @6 DO lenguajeP $@7 DONE
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     $default  reduce usando la regla 53 (@6)
 
-    @6  ir al estado 93
+    @6  ir al estado 92
 
 
-Estado 87
+Estado 85
 
-   57 initFunction: FUNC function lenguajeP ENDFUNC .
+   60 initFunction: FUNC VARNAME @8 OPEN_PAREN . funcParam CLOSE_PAREN $@9 lenguajeP $@10 ENDFUNC
 
-    $default  reduce usando la regla 57 (initFunction)
+    VARNAME  desplazar e ir al estado 93
+
+    funcParam  ir al estado 94
 
 
-Estado 88
+Estado 86
 
    20 initList: LIST NUM VARNAME @1 asignator . numList
 
@@ -1224,27 +1240,34 @@ Estado 88
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    numList     ir al estado 94
-    expr        ir al estado 95
+    numList     ir al estado 95
+    expr        ir al estado 96
     listAccess  ir al estado 39
     function    ir al estado 40
 
 
+Estado 87
+
+   68 assignParams: expr $@14 . ","
+
+    ","  desplazar e ir al estado 97
+
+
+Estado 88
+
+   66 function: VARNAME OPEN_PAREN @12 assignParams $@13 . CLOSE_PAREN
+
+    CLOSE_PAREN  desplazar e ir al estado 98
+
+
 Estado 89
-
-   58 funcParam: VARNAME ',' funcParam .
-
-    $default  reduce usando la regla 58 (funcParam)
-
-
-Estado 90
 
    56 listAccess: VARNAME OPEN_BRACKET expr CLOSE_BRACKET .
 
     $default  reduce usando la regla 56 (listAccess)
 
 
-Estado 91
+Estado 90
 
    25 expr: expr . PLUS expr
    26     | expr . MINUS expr
@@ -1253,36 +1276,54 @@ Estado 91
    29     | expr . MOD expr
    40 ifClause: IF expr negation comparator expr . THEN @3 lenguajeP DONE
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
-    THEN        desplazar e ir al estado 96
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
+    THEN        desplazar e ir al estado 99
+
+
+Estado 91
+
+   52 fromClause: FROM expr TO expr @4 . DO lenguajeP $@5 DONE
+
+    DO  desplazar e ir al estado 100
 
 
 Estado 92
 
-   52 fromClause: FROM expr TO expr @4 . DO lenguajeP $@5 DONE
+   55 foreachClause: FOREACH VARNAME IN expr @6 . DO lenguajeP $@7 DONE
 
-    DO  desplazar e ir al estado 97
+    DO  desplazar e ir al estado 101
 
 
 Estado 93
 
-   55 foreachClause: FOREACH VARNAME IN expr @6 . DO lenguajeP $@7 DONE
+   62 funcParam: VARNAME . $@11 ',' funcParam
+   63          | VARNAME .
 
-    DO  desplazar e ir al estado 98
+    CLOSE_PAREN  reduce usando la regla 63 (funcParam)
+    $default     reduce usando la regla 61 ($@11)
+
+    $@11  ir al estado 102
 
 
 Estado 94
+
+   60 initFunction: FUNC VARNAME @8 OPEN_PAREN funcParam . CLOSE_PAREN $@9 lenguajeP $@10 ENDFUNC
+
+    CLOSE_PAREN  desplazar e ir al estado 103
+
+
+Estado 95
 
    20 initList: LIST NUM VARNAME @1 asignator numList .
 
     $default  reduce usando la regla 20 (initList)
 
 
-Estado 95
+Estado 96
 
    22 numList: expr . $@2 ',' numList
    23        | expr .
@@ -1292,62 +1333,92 @@ Estado 95
    28     | expr . DIVIDED_BY expr
    29     | expr . MOD expr
 
-    PLUS        desplazar e ir al estado 55
-    MINUS       desplazar e ir al estado 56
-    TIMES       desplazar e ir al estado 57
-    DIVIDED_BY  desplazar e ir al estado 58
-    MOD         desplazar e ir al estado 59
+    PLUS        desplazar e ir al estado 53
+    MINUS       desplazar e ir al estado 54
+    TIMES       desplazar e ir al estado 55
+    DIVIDED_BY  desplazar e ir al estado 56
+    MOD         desplazar e ir al estado 57
 
     ','       reduce usando la regla 21 ($@2)
     $default  reduce usando la regla 23 (numList)
 
-    $@2  ir al estado 99
+    $@2  ir al estado 104
 
 
-Estado 96
+Estado 97
+
+   68 assignParams: expr $@14 "," .
+
+    $default  reduce usando la regla 68 (assignParams)
+
+
+Estado 98
+
+   66 function: VARNAME OPEN_PAREN @12 assignParams $@13 CLOSE_PAREN .
+
+    $default  reduce usando la regla 66 (function)
+
+
+Estado 99
 
    40 ifClause: IF expr negation comparator expr THEN . @3 lenguajeP DONE
 
     $default  reduce usando la regla 39 (@3)
 
-    @3  ir al estado 100
+    @3  ir al estado 105
 
 
-Estado 97
+Estado 100
 
    52 fromClause: FROM expr TO expr @4 DO . lenguajeP $@5 DONE
 
     $default  reduce usando la regla 2 (lenguajeP)
 
-    lenguajeP  ir al estado 101
+    lenguajeP  ir al estado 106
 
 
-Estado 98
+Estado 101
 
    55 foreachClause: FOREACH VARNAME IN expr @6 DO . lenguajeP $@7 DONE
 
     $default  reduce usando la regla 2 (lenguajeP)
 
-    lenguajeP  ir al estado 102
+    lenguajeP  ir al estado 107
 
 
-Estado 99
+Estado 102
+
+   62 funcParam: VARNAME $@11 . ',' funcParam
+
+    ','  desplazar e ir al estado 108
+
+
+Estado 103
+
+   60 initFunction: FUNC VARNAME @8 OPEN_PAREN funcParam CLOSE_PAREN . $@9 lenguajeP $@10 ENDFUNC
+
+    $default  reduce usando la regla 58 ($@9)
+
+    $@9  ir al estado 109
+
+
+Estado 104
 
    22 numList: expr $@2 . ',' numList
 
-    ','  desplazar e ir al estado 103
+    ','  desplazar e ir al estado 110
 
 
-Estado 100
+Estado 105
 
    40 ifClause: IF expr negation comparator expr THEN @3 . lenguajeP DONE
 
     $default  reduce usando la regla 2 (lenguajeP)
 
-    lenguajeP  ir al estado 104
+    lenguajeP  ir al estado 111
 
 
-Estado 101
+Estado 106
 
     1 lenguajeP: lenguajeP . line
    52 fromClause: FROM expr TO expr @4 DO lenguajeP . $@5 DONE
@@ -1374,14 +1445,14 @@ Estado 101
     show           ir al estado 19
     ifClause       ir al estado 20
     fromClause     ir al estado 21
-    $@5            ir al estado 105
+    $@5            ir al estado 112
     foreachClause  ir al estado 22
     initFunction   ir al estado 23
     function       ir al estado 24
     returnClause   ir al estado 25
 
 
-Estado 102
+Estado 107
 
     1 lenguajeP: lenguajeP . line
    55 foreachClause: FOREACH VARNAME IN expr @6 DO lenguajeP . $@7 DONE
@@ -1409,13 +1480,31 @@ Estado 102
     ifClause       ir al estado 20
     fromClause     ir al estado 21
     foreachClause  ir al estado 22
-    $@7            ir al estado 106
+    $@7            ir al estado 113
     initFunction   ir al estado 23
     function       ir al estado 24
     returnClause   ir al estado 25
 
 
-Estado 103
+Estado 108
+
+   62 funcParam: VARNAME $@11 ',' . funcParam
+
+    VARNAME  desplazar e ir al estado 93
+
+    funcParam  ir al estado 114
+
+
+Estado 109
+
+   60 initFunction: FUNC VARNAME @8 OPEN_PAREN funcParam CLOSE_PAREN $@9 . lenguajeP $@10 ENDFUNC
+
+    $default  reduce usando la regla 2 (lenguajeP)
+
+    lenguajeP  ir al estado 115
+
+
+Estado 110
 
    22 numList: expr $@2 ',' . numList
 
@@ -1425,13 +1514,13 @@ Estado 103
     STRING      desplazar e ir al estado 36
     OPEN_PAREN  desplazar e ir al estado 37
 
-    numList     ir al estado 107
-    expr        ir al estado 95
+    numList     ir al estado 116
+    expr        ir al estado 96
     listAccess  ir al estado 39
     function    ir al estado 40
 
 
-Estado 104
+Estado 111
 
     1 lenguajeP: lenguajeP . line
    40 ifClause: IF expr negation comparator expr THEN @3 lenguajeP . DONE
@@ -1442,7 +1531,7 @@ Estado 104
     VARNAME  desplazar e ir al estado 6
     IF       desplazar e ir al estado 7
     FROM     desplazar e ir al estado 8
-    DONE     desplazar e ir al estado 108
+    DONE     desplazar e ir al estado 117
     SHOW     desplazar e ir al estado 9
     FOREACH  desplazar e ir al estado 10
     FUNC     desplazar e ir al estado 11
@@ -1463,43 +1552,98 @@ Estado 104
     returnClause   ir al estado 25
 
 
-Estado 105
+Estado 112
 
    52 fromClause: FROM expr TO expr @4 DO lenguajeP $@5 . DONE
 
-    DONE  desplazar e ir al estado 109
+    DONE  desplazar e ir al estado 118
 
 
-Estado 106
+Estado 113
 
    55 foreachClause: FOREACH VARNAME IN expr @6 DO lenguajeP $@7 . DONE
 
-    DONE  desplazar e ir al estado 110
+    DONE  desplazar e ir al estado 119
 
 
-Estado 107
+Estado 114
+
+   62 funcParam: VARNAME $@11 ',' funcParam .
+
+    $default  reduce usando la regla 62 (funcParam)
+
+
+Estado 115
+
+    1 lenguajeP: lenguajeP . line
+   60 initFunction: FUNC VARNAME @8 OPEN_PAREN funcParam CLOSE_PAREN $@9 lenguajeP . $@10 ENDFUNC
+
+    TEXT     desplazar e ir al estado 3
+    NUM      desplazar e ir al estado 4
+    LIST     desplazar e ir al estado 5
+    VARNAME  desplazar e ir al estado 6
+    IF       desplazar e ir al estado 7
+    FROM     desplazar e ir al estado 8
+    SHOW     desplazar e ir al estado 9
+    FOREACH  desplazar e ir al estado 10
+    FUNC     desplazar e ir al estado 11
+    RETURN   desplazar e ir al estado 12
+
+    $default  reduce usando la regla 59 ($@10)
+
+    line           ir al estado 13
+    init           ir al estado 14
+    initNum        ir al estado 15
+    initText       ir al estado 16
+    initList       ir al estado 17
+    assign         ir al estado 18
+    show           ir al estado 19
+    ifClause       ir al estado 20
+    fromClause     ir al estado 21
+    foreachClause  ir al estado 22
+    initFunction   ir al estado 23
+    $@10           ir al estado 120
+    function       ir al estado 24
+    returnClause   ir al estado 25
+
+
+Estado 116
 
    22 numList: expr $@2 ',' numList .
 
     $default  reduce usando la regla 22 (numList)
 
 
-Estado 108
+Estado 117
 
    40 ifClause: IF expr negation comparator expr THEN @3 lenguajeP DONE .
 
     $default  reduce usando la regla 40 (ifClause)
 
 
-Estado 109
+Estado 118
 
    52 fromClause: FROM expr TO expr @4 DO lenguajeP $@5 DONE .
 
     $default  reduce usando la regla 52 (fromClause)
 
 
-Estado 110
+Estado 119
 
    55 foreachClause: FOREACH VARNAME IN expr @6 DO lenguajeP $@7 DONE .
 
     $default  reduce usando la regla 55 (foreachClause)
+
+
+Estado 120
+
+   60 initFunction: FUNC VARNAME @8 OPEN_PAREN funcParam CLOSE_PAREN $@9 lenguajeP $@10 . ENDFUNC
+
+    ENDFUNC  desplazar e ir al estado 121
+
+
+Estado 121
+
+   60 initFunction: FUNC VARNAME @8 OPEN_PAREN funcParam CLOSE_PAREN $@9 lenguajeP $@10 ENDFUNC .
+
+    $default  reduce usando la regla 60 (initFunction)

@@ -69,15 +69,8 @@
 	#include <stdlib.h> 
 	#include <limits.h> 
 
-	// ARREGLAR O PASAR DE PODER HACER UN FOREACH SOBRE UNA LISTA DEFINIDA ON THE FLY (igual pasamos)
-	// FALTAN ACCESOS A LISTAS, ASIGNACIONES A VARIABLES YA DEFINIDAS
-	// !!!!!!!!!!!!!!!!!!!!!!!!FUNCIONES!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	// !!!!!!!!!!!!!!!DERRAMADO DE REGISTROS!!!!!!!!!!!!!!!!!!!!!!!!!
-
-	// TAMBIEN USAR RESETREGS CUANDO SEA NECESARIO, Y ACORDARSE DE REMOVESCOPE
-
-	//PROPUESTA PARA FUNCIONES ES CREARSE UN STACK ESPECIFICO POR FUNCIÓN, YA QUE SOLO DEBERIA COMPROBAR LAS VARIABLES QUE ESTÉN EN DICHO STACK
-	//Y TENER UN PARAMETRO QUE INDIQUE SI ESTAMOS COMPILANDO CODIGO DE UNA FUNCION O NO, PARA ESO HABRÍA QUE CAMBIAR UN POCO EL CONCEPTO DE LOCAL OFFSET.
+	// ASIGNACIONES A POSICIONES DE LISTA
+	// !!!!!!!!!!!!!!!!!!!!!!!!RECURSIVIDAD!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	// stuff from flex that bison needs to know about:
 	extern int yylex();
@@ -105,6 +98,7 @@
 	};
 	
 	struct Stack* stack;
+	struct Stack* funcStack;
 
 	FILE* fp;
 	
@@ -126,11 +120,14 @@
 	int floatSpillRegs = 0;
 	int lastFloatRegSpilled = -1;
 	int floatSpilled[4] = {1, 1, 1, 1};
+	int inFunc = 0;
+	int funcParams = 0;
+	int funcOffset = 0;
+	int funcAssignedParams = 0;
 
 	void advanceRegister();
 	void reduceRegister();
 	void advanceFloatRegister();
-	void reduceScope();
 	void reduceLastRegSpilled();
 	void reduceFloatRegister();
 	void reduceLastFloatRegSpilled();
@@ -138,26 +135,16 @@
 	void floatSpill(int r1, int r2);
 
 	void initQFile();
-	void initTextQ(char* string);
 	int getStringLength(char* string);
-	void loadAndPrintQ(char* string);
 	void printStringQ(int memDir); 
-	void printQVariable(char* string); 
-	void printQListAccess();
 	void loadRegisterOperatorQ(int reg);
-	void getNegationQ(int neg);
-	void getComparatornQ(int comp);
-	void listAccessVar(char* listName, char* accessName);
-	void listAccessInt(char* listName, int accessPos);
-	void assignTextQ(char* string, int offset);
-	int foreachVarQ(char* localVar, char* listName);
-	struct symbol initForeachVar(char* localVar);
 
 	int isNotVar(int type);
 	int varIsInt(int type);
 	int varIsFloat(int type);
 	int varIsString(int type);
 	int varIsList(int type);
+	int varIsFunc(int type);
 
 	void resetRegs();
 	int doExpr(int r1, int r2, char* op);	
@@ -174,12 +161,19 @@
 	void endForeachQ(int label);
 	void assignRegToVar(char* varName, int reg);
 	int accessListQ(char* varName, int reg);
+	int initFunctionQ(char* funcName);
+	void initFuncParamQ(char* varName);
+	void symbolFunctionQ(char* funcName, int funcLabel);
+	void endFunctionQ(int funcLabel);
+	int callFunctionQ(char* funcName);	
+	void leaveFunctionQ(int label);
+	void assignParamQ(int reg);
 
 	void changeSymbolType(char* varName, int type);
-	char* notImplemented();
 	char* intToString(int number);
 	char* floatToString(float number);
 	struct symbol getSymbol(char* varName);
+	struct symbol getFuncSymbol(char* varName);
 	struct Stack* createStack(unsigned capacity);
 	void push(struct Stack* stack, struct symbol item);
 	int isEmpty(struct Stack* stack); 
@@ -187,7 +181,7 @@
 	void removeScope(struct Stack* stack);
 
 
-#line 191 "lenguajeP.tab.c" /* yacc.c:339  */
+#line 185 "lenguajeP.tab.c" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -269,10 +263,10 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 126 "lenguajeP.y" /* yacc.c:355  */
+#line 120 "lenguajeP.y" /* yacc.c:355  */
 int entero; float real; char* string;
 
-#line 276 "lenguajeP.tab.c" /* yacc.c:355  */
+#line 270 "lenguajeP.tab.c" /* yacc.c:355  */
 };
 
 typedef union YYSTYPE YYSTYPE;
@@ -289,7 +283,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 293 "lenguajeP.tab.c" /* yacc.c:358  */
+#line 287 "lenguajeP.tab.c" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -531,21 +525,21 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  2
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   180
+#define YYLAST   179
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  44
+#define YYNTOKENS  45
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  29
+#define YYNNTS  37
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  62
+#define YYNRULES  71
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  111
+#define YYNSTATES  122
 
 /* YYTRANSLATE[YYX] -- Symbol number corresponding to YYX as returned
    by yylex, with out-of-bounds checking.  */
 #define YYUNDEFTOK  2
-#define YYMAXUTOK   296
+#define YYMAXUTOK   297
 
 #define YYTRANSLATE(YYX)                                                \
   ((unsigned int) (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
@@ -583,20 +577,21 @@ static const yytype_uint8 yytranslate[] =
        5,     6,     7,     8,     9,    10,    11,    12,    13,    14,
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
-      35,    36,    37,    38,    39,    40,    41
+      35,    36,    37,    38,    39,    40,    41,    44
 };
 
 #if YYDEBUG
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,   153,   153,   154,   157,   158,   159,   160,   161,   162,
-     163,   164,   165,   168,   169,   170,   173,   175,   178,   179,
-     182,   182,   184,   184,   185,   188,   191,   192,   193,   194,
-     195,   196,   197,   198,   199,   200,   201,   202,   205,   206,
-     209,   209,   212,   213,   215,   216,   217,   218,   219,   220,
-     221,   224,   224,   224,   227,   227,   227,   230,   233,   235,
-     236,   238,   241
+       0,   147,   147,   148,   151,   152,   153,   154,   155,   156,
+     157,   158,   159,   162,   163,   164,   167,   169,   172,   173,
+     176,   176,   178,   178,   179,   182,   185,   186,   187,   188,
+     189,   190,   191,   192,   193,   194,   195,   196,   199,   200,
+     203,   203,   206,   207,   209,   210,   211,   212,   213,   214,
+     215,   218,   218,   218,   221,   221,   221,   224,   227,   227,
+     227,   227,   229,   229,   230,   233,   233,   233,   235,   235,
+     236,   239
 };
 #endif
 
@@ -610,12 +605,13 @@ static const char *const yytname[] =
   "IF", "THEN", "FROM", "TO", "DO", "DONE", "ENDFUNC", "SHOW", "TAB",
   "NOT", "GREATER", "LOWER", "GEQUALS", "LEQUALS", "EQUALS", "NOT_EQUALS",
   "AND", "OR", "FOREACH", "IN", "FUNC", "RETURN", "OPEN_BRACKET",
-  "CLOSE_BRACKET", "OPEN_PAREN", "CLOSE_PAREN", "'='", "','", "$accept",
-  "lenguajeP", "line", "init", "initNum", "initText", "asignator",
-  "initList", "@1", "numList", "$@2", "assign", "expr", "show", "ifClause",
-  "@3", "negation", "comparator", "fromClause", "@4", "$@5",
-  "foreachClause", "@6", "$@7", "listAccess", "initFunction", "funcParam",
-  "function", "returnClause", YY_NULLPTR
+  "CLOSE_BRACKET", "OPEN_PAREN", "CLOSE_PAREN", "'='", "','", "\",\"",
+  "$accept", "lenguajeP", "line", "init", "initNum", "initText",
+  "asignator", "initList", "@1", "numList", "$@2", "assign", "expr",
+  "show", "ifClause", "@3", "negation", "comparator", "fromClause", "@4",
+  "$@5", "foreachClause", "@6", "$@7", "listAccess", "initFunction", "@8",
+  "$@9", "$@10", "funcParam", "$@11", "function", "@12", "$@13",
+  "assignParams", "$@14", "returnClause", YY_NULLPTR
 };
 #endif
 
@@ -628,16 +624,16 @@ static const yytype_uint16 yytoknum[] =
      265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
      275,   276,   277,   278,   279,   280,   281,   282,   283,   284,
      285,   286,   287,   288,   289,   290,   291,   292,   293,   294,
-     295,   296,    61,    44
+     295,   296,    61,    44,   297
 };
 # endif
 
-#define YYPACT_NINF -39
+#define YYPACT_NINF -23
 
 #define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-39)))
+  (!!((Yystate) == (-23)))
 
-#define YYTABLE_NINF -23
+#define YYTABLE_NINF -71
 
 #define yytable_value_is_error(Yytable_value) \
   0
@@ -646,18 +642,19 @@ static const yytype_uint16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-     -39,    61,   -39,    -5,    -4,    14,    29,    74,    74,    74,
-       4,    11,    74,   -39,   -39,   -39,   -39,   -39,   -39,   -39,
-     -39,   -39,   -39,   -39,   -39,   -39,     1,     1,    12,   -39,
-      20,   -39,    74,   -39,   -39,    -8,   -39,    74,   130,   -39,
-     -39,   158,   144,    23,     0,   -39,   144,    74,    74,   -39,
-       3,    -2,   144,    74,    13,    74,    74,    74,    74,    74,
-     -39,   132,    74,    74,    86,   144,   144,     1,    20,   -39,
-      28,   -39,    19,    19,   -39,   -39,   -39,   -39,   -39,   -39,
-     -39,   -39,   -39,   -39,    74,   144,   144,   -39,    74,   -39,
-     -39,   163,    35,    48,   -39,     5,   -39,   -39,   -39,    27,
-     -39,   112,   112,    74,   108,    51,    52,   -39,   -39,   -39,
-     -39
+     -23,    56,   -23,    -9,    -8,    10,    58,    51,    51,    51,
+      12,    24,    51,   -23,   -23,   -23,   -23,   -23,   -23,   -23,
+     -23,   -23,   -23,   -23,   -23,   -23,    15,    15,    25,   -23,
+     -23,   -23,    51,   -23,   -23,    28,   -23,    51,   126,   -23,
+     -23,   131,   169,     4,   -23,   169,    51,    51,   -23,    51,
+     169,    51,     3,    51,    51,    51,    51,    51,   -23,   128,
+      51,    51,     2,   169,   169,    15,    26,   -23,    14,   -23,
+      19,    19,   -23,   -23,   -23,   -23,   -23,   -23,   -23,   -23,
+     -23,   -23,    51,   169,   169,    45,    51,    27,    29,   -23,
+     154,    55,    57,    37,    39,   -23,     9,   -23,   -23,   -23,
+     -23,   -23,    38,   -23,    40,   -23,   108,   108,    45,   -23,
+      51,    81,    61,    66,   -23,   108,   -23,   -23,   -23,   -23,
+      67,   -23
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -668,31 +665,34 @@ static const yytype_uint8 yydefact[] =
        3,     0,     1,     0,     0,     0,     0,     0,     0,    39,
        0,     0,     0,     2,     4,    13,    14,    15,     5,     6,
        7,     8,    10,     9,    12,    11,     0,     0,     0,    18,
-       0,    19,     0,    34,    35,    33,    36,     0,    43,    32,
-      37,     0,    38,     0,     0,     3,    62,     0,     0,    20,
-      60,     0,    25,     0,     0,     0,     0,     0,     0,     0,
-      42,     0,     0,     0,     0,    17,    16,     0,     0,    61,
-       0,    31,    26,    27,    28,    29,    30,    46,    44,    45,
-      47,    48,    49,    50,     0,    51,    54,    58,     0,    59,
-      57,     0,     0,     0,    21,    24,    40,     3,     3,     0,
-       3,    52,    55,     0,     0,     0,     0,    23,    41,    53,
-      56
+      65,    19,     0,    34,    35,    33,    36,     0,    43,    32,
+      37,     0,    38,     0,    58,    71,     0,     0,    20,     0,
+      25,     0,     0,     0,     0,     0,     0,     0,    42,     0,
+       0,     0,     0,    17,    16,     0,    68,    66,     0,    31,
+      26,    27,    28,    29,    30,    46,    44,    45,    47,    48,
+      49,    50,     0,    51,    54,     0,     0,     0,     0,    57,
+       0,     0,     0,    62,     0,    21,    24,    69,    67,    40,
+       3,     3,     0,    59,     0,     3,    52,    55,     0,     3,
+       0,     0,     0,     0,    63,    60,    23,    41,    53,    56,
+       0,    61
 };
 
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -39,   -38,   -39,   -39,   -39,   -39,   -22,   -39,   -39,   -28,
-     -39,   -39,    -6,   -39,   -39,   -39,   -39,   -39,   -39,   -39,
-     -39,   -39,   -39,   -39,   -39,   -39,     8,    -1,   -39
+     -23,    65,   -23,   -23,   -23,   -23,   -19,   -23,   -23,   -22,
+     -23,   -23,    -6,   -23,   -23,   -23,   -23,   -23,   -23,   -23,
+     -23,   -23,   -23,   -23,   -23,   -23,   -23,   -23,   -23,   -13,
+     -23,    -1,   -23,   -23,   -23,   -23,   -23
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-      -1,     1,    13,    14,    15,    16,    32,    17,    67,    94,
-      99,    18,    95,    19,    20,   100,    61,    84,    21,    92,
-     105,    22,    93,   106,    39,    23,    51,    40,    25
+      -1,     1,    13,    14,    15,    16,    32,    17,    65,    95,
+     104,    18,    96,    19,    20,   105,    59,    82,    21,    91,
+     112,    22,    92,   113,    39,    23,    62,   109,   120,    94,
+     102,    40,    49,    88,    67,    87,    25
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -700,78 +700,78 @@ static const yytype_int8 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      24,    38,    41,    42,    47,    48,    46,    64,    26,    27,
-      45,    55,    56,    57,    58,    59,    29,    43,    28,    55,
-      56,    57,    58,    59,    44,    49,    52,    57,    58,    59,
-      53,    54,    30,    50,    55,    56,    57,    58,    59,    69,
-      30,    65,    66,    31,    29,    88,    68,    70,   -22,    72,
-      73,    74,    75,    76,    71,    97,    85,    86,    63,   101,
-     102,     2,   104,    24,     3,     4,     5,    90,    98,    30,
-     103,    31,   109,   110,     6,   107,    89,     7,    91,     8,
-       0,     0,     0,     0,     9,    33,    34,    35,    36,     3,
-       4,     5,     0,     0,     0,    10,     0,    11,    12,     6,
-      24,    24,     7,    24,     8,     0,     0,     0,    87,     9,
-       0,     3,     4,     5,    37,     3,     4,     5,     0,     0,
-      10,     6,    11,    12,     7,     6,     8,     0,     7,   108,
-       8,     9,     0,     0,     0,     9,    55,    56,    57,    58,
-      59,     0,    10,     0,    11,    12,    10,    77,    11,    12,
-      55,    56,    57,    58,    59,    60,     0,     0,    78,    79,
-      80,    81,    82,    83,    55,    56,    57,    58,    59,    55,
-      56,    57,    58,    59,     0,     0,     0,    62,     0,     0,
-      96
+      24,    38,    41,    42,    26,    27,    45,    46,    47,    53,
+      54,    55,    56,    57,    28,    53,    54,    55,    56,    57,
+      53,    54,    55,    56,    57,    43,    50,    55,    56,    57,
+      29,    52,    53,    54,    55,    56,    57,    44,    48,    61,
+      63,    64,    85,    66,    69,    68,    86,    70,    71,    72,
+      73,    74,   -22,    89,    83,    84,     2,    31,    93,     3,
+       4,     5,    33,    34,    35,    36,    51,   -70,    30,     6,
+      98,    97,     7,    29,     8,   100,    90,   101,   -64,     9,
+     103,   108,   118,   110,     3,     4,     5,   119,   116,   121,
+      10,    37,    11,    12,     6,   114,     0,     7,    30,     8,
+      31,     0,   117,     0,     9,    24,    24,     0,     0,     0,
+      24,     3,     4,     5,    24,    10,     0,    11,    12,     0,
+       0,     6,     0,     0,     7,     0,     8,     0,     0,     0,
+       0,     9,    53,    54,    55,    56,    57,    53,    54,    55,
+      56,    57,    10,    75,    11,    12,     0,     0,     0,     0,
+      60,    58,     0,     0,    76,    77,    78,    79,    80,    81,
+      53,    54,    55,    56,    57,   106,   107,     0,     0,     0,
+     111,    99,     0,     0,   115,    53,    54,    55,    56,    57
 };
 
 static const yytype_int8 yycheck[] =
 {
-       1,     7,     8,     9,    26,    27,    12,    45,    13,    13,
-      11,     6,     7,     8,     9,    10,    15,    13,     4,     6,
-       7,     8,     9,    10,    13,    13,    32,     8,     9,    10,
-      38,    37,    40,    13,     6,     7,     8,     9,    10,    41,
-      40,    47,    48,    42,    15,    67,    43,    53,    43,    55,
-      56,    57,    58,    59,    41,    20,    62,    63,    35,    97,
-      98,     0,   100,    64,     3,     4,     5,    39,    20,    40,
-      43,    42,    21,    21,    13,   103,    68,    16,    84,    18,
-      -1,    -1,    -1,    -1,    23,    11,    12,    13,    14,     3,
-       4,     5,    -1,    -1,    -1,    34,    -1,    36,    37,    13,
-     101,   102,    16,   104,    18,    -1,    -1,    -1,    22,    23,
-      -1,     3,     4,     5,    40,     3,     4,     5,    -1,    -1,
-      34,    13,    36,    37,    16,    13,    18,    -1,    16,    21,
-      18,    23,    -1,    -1,    -1,    23,     6,     7,     8,     9,
-      10,    -1,    34,    -1,    36,    37,    34,    15,    36,    37,
-       6,     7,     8,     9,    10,    25,    -1,    -1,    26,    27,
-      28,    29,    30,    31,     6,     7,     8,     9,    10,     6,
-       7,     8,     9,    10,    -1,    -1,    -1,    19,    -1,    -1,
-      17
+       1,     7,     8,     9,    13,    13,    12,    26,    27,     6,
+       7,     8,     9,    10,     4,     6,     7,     8,     9,    10,
+       6,     7,     8,     9,    10,    13,    32,     8,     9,    10,
+      15,    37,     6,     7,     8,     9,    10,    13,    13,    35,
+      46,    47,    40,    49,    41,    51,    65,    53,    54,    55,
+      56,    57,    43,    39,    60,    61,     0,    42,    13,     3,
+       4,     5,    11,    12,    13,    14,    38,    41,    40,    13,
+      41,    44,    16,    15,    18,    20,    82,    20,    41,    23,
+      41,    43,    21,    43,     3,     4,     5,    21,   110,    22,
+      34,    40,    36,    37,    13,   108,    -1,    16,    40,    18,
+      42,    -1,    21,    -1,    23,   106,   107,    -1,    -1,    -1,
+     111,     3,     4,     5,   115,    34,    -1,    36,    37,    -1,
+      -1,    13,    -1,    -1,    16,    -1,    18,    -1,    -1,    -1,
+      -1,    23,     6,     7,     8,     9,    10,     6,     7,     8,
+       9,    10,    34,    15,    36,    37,    -1,    -1,    -1,    -1,
+      19,    25,    -1,    -1,    26,    27,    28,    29,    30,    31,
+       6,     7,     8,     9,    10,   100,   101,    -1,    -1,    -1,
+     105,    17,    -1,    -1,   109,     6,     7,     8,     9,    10
 };
 
   /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
      symbol of state STATE-NUM.  */
 static const yytype_uint8 yystos[] =
 {
-       0,    45,     0,     3,     4,     5,    13,    16,    18,    23,
-      34,    36,    37,    46,    47,    48,    49,    51,    55,    57,
-      58,    62,    65,    69,    71,    72,    13,    13,     4,    15,
-      40,    42,    50,    11,    12,    13,    14,    40,    56,    68,
-      71,    56,    56,    13,    13,    71,    56,    50,    50,    13,
-      13,    70,    56,    38,    56,     6,     7,     8,     9,    10,
-      25,    60,    19,    35,    45,    56,    56,    52,    43,    41,
-      56,    41,    56,    56,    56,    56,    56,    15,    26,    27,
-      28,    29,    30,    31,    61,    56,    56,    22,    50,    70,
-      39,    56,    63,    66,    53,    56,    17,    20,    20,    54,
-      59,    45,    45,    43,    45,    64,    67,    53,    21,    21,
-      21
+       0,    46,     0,     3,     4,     5,    13,    16,    18,    23,
+      34,    36,    37,    47,    48,    49,    50,    52,    56,    58,
+      59,    63,    66,    70,    76,    81,    13,    13,     4,    15,
+      40,    42,    51,    11,    12,    13,    14,    40,    57,    69,
+      76,    57,    57,    13,    13,    57,    51,    51,    13,    77,
+      57,    38,    57,     6,     7,     8,     9,    10,    25,    61,
+      19,    35,    71,    57,    57,    53,    57,    79,    57,    41,
+      57,    57,    57,    57,    57,    15,    26,    27,    28,    29,
+      30,    31,    62,    57,    57,    40,    51,    80,    78,    39,
+      57,    64,    67,    13,    74,    54,    57,    44,    41,    17,
+      20,    20,    75,    41,    55,    60,    46,    46,    43,    72,
+      43,    46,    65,    68,    74,    46,    54,    21,    21,    21,
+      73,    22
 };
 
   /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_uint8 yyr1[] =
 {
-       0,    44,    45,    45,    46,    46,    46,    46,    46,    46,
-      46,    46,    46,    47,    47,    47,    48,    49,    50,    50,
-      52,    51,    54,    53,    53,    55,    56,    56,    56,    56,
-      56,    56,    56,    56,    56,    56,    56,    56,    57,    57,
-      59,    58,    60,    60,    61,    61,    61,    61,    61,    61,
-      61,    63,    64,    62,    66,    67,    65,    68,    69,    70,
-      70,    71,    72
+       0,    45,    46,    46,    47,    47,    47,    47,    47,    47,
+      47,    47,    47,    48,    48,    48,    49,    50,    51,    51,
+      53,    52,    55,    54,    54,    56,    57,    57,    57,    57,
+      57,    57,    57,    57,    57,    57,    57,    57,    58,    58,
+      60,    59,    61,    61,    62,    62,    62,    62,    62,    62,
+      62,    64,    65,    63,    67,    68,    66,    69,    71,    72,
+      73,    70,    75,    74,    74,    77,    78,    76,    80,    79,
+      79,    81
 };
 
   /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
@@ -782,8 +782,9 @@ static const yytype_uint8 yyr2[] =
        0,     6,     0,     4,     1,     3,     3,     3,     3,     3,
        3,     3,     1,     1,     1,     1,     1,     1,     2,     1,
        0,     9,     1,     0,     1,     1,     1,     1,     1,     1,
-       1,     0,     0,     9,     0,     0,     9,     4,     4,     3,
-       1,     4,     2
+       1,     0,     0,     9,     0,     0,     9,     4,     0,     0,
+       0,    10,     0,     4,     1,     0,     0,     6,     0,     3,
+       1,     2
 };
 
 
@@ -1460,241 +1461,295 @@ yyreduce:
   switch (yyn)
     {
         case 2:
-#line 153 "lenguajeP.y" /* yacc.c:1646  */
-    {fprintf(fp, "/////////////LINEA BINGOOOOO\n");}
-#line 1466 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 147 "lenguajeP.y" /* yacc.c:1646  */
+    {fprintf(fp, "/////////////Scope: %i\n", localOffset);}
+#line 1467 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 16:
-#line 173 "lenguajeP.y" /* yacc.c:1646  */
+#line 167 "lenguajeP.y" /* yacc.c:1646  */
     {initNumVarQ((yyvsp[-2].string), (yyvsp[0].entero));}
-#line 1472 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1473 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 17:
-#line 175 "lenguajeP.y" /* yacc.c:1646  */
+#line 169 "lenguajeP.y" /* yacc.c:1646  */
     {initTextVarQ((yyvsp[-2].string), (yyvsp[0].entero));}
-#line 1478 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1479 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 20:
-#line 182 "lenguajeP.y" /* yacc.c:1646  */
-    {struct symbol s; s = getSymbol((yyvsp[0].string)); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {(yyval.entero) = localOffset; listPosition = 0;}}
-#line 1484 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 176 "lenguajeP.y" /* yacc.c:1646  */
+    {struct symbol s; if (inFunc) s = getFuncSymbol((yyvsp[0].string)); else s = getSymbol((yyvsp[0].string)); if (s.type != -1) yyerror("La variable ya ha sido inicializada"); else {if (inFunc) (yyval.entero) = funcOffset; else (yyval.entero) = localOffset; listPosition = 0;}}
+#line 1485 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 21:
-#line 182 "lenguajeP.y" /* yacc.c:1646  */
-    {struct symbol s; s.memDir = (yyvsp[-2].entero); s.type = 3; s.name = (yyvsp[-3].string); s.scope = currentScope; s.size = listPosition; push(stack, s); localOffset += listPosition * 4; listPosition = 0; resetRegs();}
-#line 1490 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 176 "lenguajeP.y" /* yacc.c:1646  */
+    {struct symbol s; s.memDir = (yyvsp[-2].entero); s.type = 3; s.name = (yyvsp[-3].string); s.scope = currentScope; s.size = listPosition; if (inFunc) {funcOffset += listPosition * 4; push(funcStack, s);} else {localOffset += listPosition * 4; push(stack, s);} listPosition = 0; resetRegs();}
+#line 1491 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 22:
-#line 184 "lenguajeP.y" /* yacc.c:1646  */
+#line 178 "lenguajeP.y" /* yacc.c:1646  */
     {initListPositionQ((yyvsp[0].entero));}
-#line 1496 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1497 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 24:
-#line 185 "lenguajeP.y" /* yacc.c:1646  */
+#line 179 "lenguajeP.y" /* yacc.c:1646  */
     {initListPositionQ((yyvsp[0].entero)); (yyval.entero) = 100 + listPosition; }
-#line 1502 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1503 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 25:
-#line 188 "lenguajeP.y" /* yacc.c:1646  */
+#line 182 "lenguajeP.y" /* yacc.c:1646  */
     {assignRegToVar((yyvsp[-2].string), (yyvsp[0].entero)); resetRegs();}
-#line 1508 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1509 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 26:
-#line 191 "lenguajeP.y" /* yacc.c:1646  */
+#line 185 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "+");}
-#line 1514 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1515 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 192 "lenguajeP.y" /* yacc.c:1646  */
+#line 186 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "-");}
-#line 1520 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1521 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 28:
-#line 193 "lenguajeP.y" /* yacc.c:1646  */
+#line 187 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "*");}
-#line 1526 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1527 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 29:
-#line 194 "lenguajeP.y" /* yacc.c:1646  */
+#line 188 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "/");}
-#line 1532 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1533 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 30:
-#line 195 "lenguajeP.y" /* yacc.c:1646  */
+#line 189 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = doExpr((yyvsp[-2].entero), (yyvsp[0].entero), "%");}
-#line 1538 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1539 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 196 "lenguajeP.y" /* yacc.c:1646  */
+#line 190 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = (yyvsp[-1].entero);}
-#line 1544 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1545 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 32:
-#line 197 "lenguajeP.y" /* yacc.c:1646  */
+#line 191 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = (yyvsp[0].entero);}
-#line 1550 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1551 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 33:
-#line 198 "lenguajeP.y" /* yacc.c:1646  */
+#line 192 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = getVarnameRegQ((yyvsp[0].string));}
-#line 1556 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1557 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 34:
-#line 199 "lenguajeP.y" /* yacc.c:1646  */
+#line 193 "lenguajeP.y" /* yacc.c:1646  */
     {advanceRegister(); fprintf(fp, "\tR%i=%i;\n", currentReg, (yyvsp[0].entero)); (yyval.entero) = currentReg;}
-#line 1562 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1563 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 35:
-#line 200 "lenguajeP.y" /* yacc.c:1646  */
+#line 194 "lenguajeP.y" /* yacc.c:1646  */
     {advanceFloatRegister(); fprintf(fp, "\tRR%i=%f;\n", currentFloatReg, (yyvsp[0].real)); (yyval.entero) = currentFloatReg + 10; }
-#line 1568 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1569 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 36:
-#line 201 "lenguajeP.y" /* yacc.c:1646  */
+#line 195 "lenguajeP.y" /* yacc.c:1646  */
     {advanceRegister(); (yyval.entero) = getStringRegQ(removeQuotes((yyvsp[0].string))); }
-#line 1574 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1575 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 37:
-#line 202 "lenguajeP.y" /* yacc.c:1646  */
+#line 196 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = (yyvsp[0].entero);}
-#line 1580 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1581 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 38:
-#line 205 "lenguajeP.y" /* yacc.c:1646  */
+#line 199 "lenguajeP.y" /* yacc.c:1646  */
     {printFromReg((yyvsp[0].entero)); resetRegs();}
-#line 1586 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1587 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 39:
-#line 206 "lenguajeP.y" /* yacc.c:1646  */
+#line 200 "lenguajeP.y" /* yacc.c:1646  */
     {printStringQ(emptyStringDir);}
-#line 1592 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1593 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 40:
-#line 209 "lenguajeP.y" /* yacc.c:1646  */
+#line 203 "lenguajeP.y" /* yacc.c:1646  */
     {processCondition((yyvsp[-4].entero), (yyvsp[-1].entero), (yyvsp[-2].string)); (yyval.entero) = nextLabel++; fprintf(fp, "\n\tIF(%sR0) GT(%i);\n", (yyvsp[-3].string), (yyval.entero)); resetRegs(); currentScope++;}
-#line 1598 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1599 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 41:
-#line 209 "lenguajeP.y" /* yacc.c:1646  */
-    {fprintf(fp, "L %i:\n", (yyvsp[-2].entero)); removeScope(stack); resetRegs();}
-#line 1604 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 203 "lenguajeP.y" /* yacc.c:1646  */
+    {fprintf(fp, "L %i:\n", (yyvsp[-2].entero)); if (inFunc) removeScope(funcStack); else removeScope(stack); resetRegs();}
+#line 1605 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 42:
-#line 212 "lenguajeP.y" /* yacc.c:1646  */
+#line 206 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = "";}
-#line 1610 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1611 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 43:
-#line 213 "lenguajeP.y" /* yacc.c:1646  */
+#line 207 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = "!";}
-#line 1616 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1617 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 44:
-#line 215 "lenguajeP.y" /* yacc.c:1646  */
+#line 209 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = ">";}
-#line 1622 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1623 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 45:
-#line 216 "lenguajeP.y" /* yacc.c:1646  */
+#line 210 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = "<";}
-#line 1628 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1629 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 46:
-#line 217 "lenguajeP.y" /* yacc.c:1646  */
+#line 211 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = "==";}
-#line 1634 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1635 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 47:
-#line 218 "lenguajeP.y" /* yacc.c:1646  */
+#line 212 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = ">=";}
-#line 1640 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1641 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 48:
-#line 219 "lenguajeP.y" /* yacc.c:1646  */
+#line 213 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = "<=";}
-#line 1646 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1647 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 49:
-#line 220 "lenguajeP.y" /* yacc.c:1646  */
+#line 214 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = "==";}
-#line 1652 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1653 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 50:
-#line 221 "lenguajeP.y" /* yacc.c:1646  */
+#line 215 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.string) = "!=";}
-#line 1658 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1659 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 224 "lenguajeP.y" /* yacc.c:1646  */
+#line 218 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = nextLabel; initFromQ((yyvsp[-2].entero), (yyvsp[0].entero));}
-#line 1664 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1665 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 52:
-#line 224 "lenguajeP.y" /* yacc.c:1646  */
+#line 218 "lenguajeP.y" /* yacc.c:1646  */
     {endFromQ((yyvsp[-2].entero));}
-#line 1670 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1671 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 227 "lenguajeP.y" /* yacc.c:1646  */
+#line 221 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = nextLabel; initForeachQ((yyvsp[-2].string), (yyvsp[0].entero));}
-#line 1676 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1677 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 227 "lenguajeP.y" /* yacc.c:1646  */
+#line 221 "lenguajeP.y" /* yacc.c:1646  */
     {endForeachQ((yyvsp[-2].entero));}
-#line 1682 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1683 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 230 "lenguajeP.y" /* yacc.c:1646  */
+#line 224 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = accessListQ((yyvsp[-3].string), (yyvsp[-1].entero));}
-#line 1688 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1689 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
-  case 61:
-#line 238 "lenguajeP.y" /* yacc.c:1646  */
+  case 58:
+#line 227 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = initFunctionQ((yyvsp[0].string));}
+#line 1695 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 59:
+#line 227 "lenguajeP.y" /* yacc.c:1646  */
+    {symbolFunctionQ((yyvsp[-4].string), (yyvsp[-3].entero));}
+#line 1701 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 60:
+#line 227 "lenguajeP.y" /* yacc.c:1646  */
+    {endFunctionQ((yyvsp[-5].entero));}
+#line 1707 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 62:
+#line 229 "lenguajeP.y" /* yacc.c:1646  */
+    {initFuncParamQ((yyvsp[0].string));}
+#line 1713 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 64:
+#line 230 "lenguajeP.y" /* yacc.c:1646  */
+    {initFuncParamQ((yyvsp[0].string));}
+#line 1719 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 65:
+#line 233 "lenguajeP.y" /* yacc.c:1646  */
+    {(yyval.entero) = callFunctionQ((yyvsp[-1].string));}
+#line 1725 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 66:
+#line 233 "lenguajeP.y" /* yacc.c:1646  */
+    {leaveFunctionQ((yyvsp[-1].entero));}
+#line 1731 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 67:
+#line 233 "lenguajeP.y" /* yacc.c:1646  */
     {(yyval.entero) = 0;}
-#line 1694 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1737 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 68:
+#line 235 "lenguajeP.y" /* yacc.c:1646  */
+    {assignParamQ((yyvsp[0].entero));}
+#line 1743 "lenguajeP.tab.c" /* yacc.c:1646  */
+    break;
+
+  case 70:
+#line 236 "lenguajeP.y" /* yacc.c:1646  */
+    {assignParamQ((yyvsp[0].entero));}
+#line 1749 "lenguajeP.tab.c" /* yacc.c:1646  */
     break;
 
 
-#line 1698 "lenguajeP.tab.c" /* yacc.c:1646  */
+#line 1753 "lenguajeP.tab.c" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -1922,7 +1977,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 243 "lenguajeP.y" /* yacc.c:1906  */
+#line 241 "lenguajeP.y" /* yacc.c:1906  */
 
 
 int main(int argc, char** argv) {
@@ -1947,16 +2002,26 @@ void advanceRegister(){
 		currentReg = 0;
 		if (spillMode) spillRegs++;
 		spillMode = 1;
-		localOffset += 4;
-		if (spilled[0] != 0) fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset);
+		if (inFunc) {
+			funcOffset += 4;
+			if (spilled[0] != 0) fprintf(fp, "\tI(R6-%i)=R0;\n", funcOffset);
+		} else {			
+			localOffset += 4;
+			if (spilled[0] != 0) fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset);
+		}
 	}
 	else {
 		currentReg++;
 		if (spillMode) {
 			if (spilled[currentReg] != 0){				
 				spillRegs++;
-				localOffset += 4;
-				fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, currentReg);
+				if (inFunc) {
+					funcOffset += 4;
+					fprintf(fp, "\tI(R6-%i)=R%i;\n", funcOffset, currentReg);
+				} else {					
+					localOffset += 4;
+					fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, currentReg);
+				}
 			}
 			spilled[currentReg] = 1;	
 		}
@@ -1978,16 +2043,26 @@ void advanceFloatRegister(){
 		currentFloatReg = 0;
 		if (floatSpillMode) floatSpillRegs++;
 		floatSpillMode = 1;
-		localOffset += 4;
-		if (floatSpilled[0] != 0) fprintf(fp, "\tF(R6-%i)=RR0;\n", localOffset);
+		if (inFunc){
+			funcOffset += 4;
+			if (floatSpilled[0] != 0) fprintf(fp, "\tF(R6-%i)=RR0;\n", funcOffset);
+		} else {
+			localOffset += 4;
+			if (floatSpilled[0] != 0) fprintf(fp, "\tF(R6-%i)=RR0;\n", localOffset);
+		}
 	}
 	else {
 		currentFloatReg++;
 		if (floatSpillMode) {
 			if (floatSpilled[currentFloatReg] != 0){				
 				floatSpillRegs++;
-				localOffset += 4;
-				fprintf(fp, "\tF(R6-%i)=RR%i;\n", localOffset, currentFloatReg);
+				if (inFunc) {
+					funcOffset += 4;
+					fprintf(fp, "\tF(R6-%i)=RR%i;\n", funcOffset, currentFloatReg);
+				} else {
+					localOffset += 4;
+					fprintf(fp, "\tF(R6-%i)=RR%i;\n", localOffset, currentFloatReg);
+				}
 			}
 			floatSpilled[currentFloatReg] = 1;	
 		}
@@ -2024,12 +2099,21 @@ int varIsList(int type){
 	return (type == 3);
 }
 
+int varIsFunc(int type){
+	return (type == 4);
+}
+
 void floatSpill(int r1, int r2){
 	if (floatSpillMode){		
 		if (lastFloatRegSpilled == -1) lastFloatRegSpilled = r2;
 		else if (r1 == lastFloatRegSpilled){
-			fprintf(fp, "\tRR%i=F(R6-%i);\n", r1, localOffset);
-			localOffset -= 4;			
+			if (inFunc){
+				fprintf(fp, "\tRR%i=F(R6-%i);\n", r1, funcOffset);
+				funcOffset -= 4;
+			} else {
+				fprintf(fp, "\tRR%i=F(R6-%i);\n", r1, localOffset);
+				localOffset -= 4;
+			}						
 			if (floatSpillRegs > 0) {floatSpillRegs--; reduceLastFloatRegSpilled();}
 			else {
 				lastFloatRegSpilled = -1;
@@ -2044,8 +2128,13 @@ void intSpill(int r1, int r2){
 	if (spillMode){		
 		if (lastRegSpilled == -1) lastRegSpilled = r2;
 		else if (r1 == lastRegSpilled){
-			fprintf(fp, "\tR%i=I(R6-%i);\n", r1, localOffset);
-			localOffset -= 4;						
+			if (inFunc){
+				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, funcOffset);
+				funcOffset -= 4;
+			} else {
+				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, localOffset);
+				localOffset -= 4;
+			}						
 			if (spillRegs > 0) {spillRegs--; reduceLastRegSpilled();}
 			else {
 				lastRegSpilled = -1;
@@ -2106,28 +2195,54 @@ void resetRegs(){
 }
 
 void initNumVarQ(char* varName, int reg){
-	struct symbol s = getSymbol(varName);
-	if (!isNotVar(s.type)) yyerror("La variable ya existe.");
-	if (reg < -9) yyerror("Una variable numérica no puede inicializarse con una String"); // es string
-	if (reg > 9) {
-		reg -= 10;
-		s.type = 1;
-		s.name = varName;
-		localOffset += 4;
-		s.memDir = localOffset;
-		s.scope = currentScope;
-		fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg);
-		push(stack, s);
-		resetRegs();
+	if (inFunc) {
+		struct symbol s = getFuncSymbol(varName);
+		if (!isNotVar(s.type)) yyerror("La variable ya existe.");
+		if (reg < -9) yyerror("Una variable numérica no puede inicializarse con una String");
+		if (reg > 9) {
+			reg -= 10;
+			s.type = 1;
+			s.name = varName;
+			funcOffset += 4;
+			s.memDir = funcOffset;
+			s.scope = currentScope;
+			fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg);
+			push(funcStack, s);
+			resetRegs();
+		} else {
+			s.type = 0;
+			s.name = varName;
+			funcOffset += 4;
+			s.memDir = funcOffset;
+			s.scope = currentScope;
+			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			push(funcStack, s);
+			resetRegs();
+		}
 	} else {
-		s.type = 0;
-		s.name = varName;
-		localOffset += 4;
-		s.memDir = localOffset;
-		s.scope = currentScope;
-		fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
-		push(stack, s);
-		resetRegs();
+		struct symbol s = getSymbol(varName);
+		if (!isNotVar(s.type)) yyerror("La variable ya existe.");
+		if (reg < -9) yyerror("Una variable numérica no puede inicializarse con una String"); // es string
+		if (reg > 9) {
+			reg -= 10;
+			s.type = 1;
+			s.name = varName;
+			localOffset += 4;
+			s.memDir = localOffset;
+			s.scope = currentScope;
+			fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg);
+			push(stack, s);
+			resetRegs();
+		} else {
+			s.type = 0;
+			s.name = varName;
+			localOffset += 4;
+			s.memDir = localOffset;
+			s.scope = currentScope;
+			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			push(stack, s);
+			resetRegs();
+		}
 	}
 }
 
@@ -2141,19 +2256,36 @@ int getStringLength(char* string){
 }
 
 void initTextVarQ(char* varName, int reg){
-	struct symbol s = getSymbol(varName);
-	if (!isNotVar(s.type)) yyerror("La variable ya existe.");
-	if (reg >= 0) yyerror("Una variable tipo texto no se puede inicializar con un número.");
-	else {
-		reg += 10;
-		s.type = 2;
-		s.name = varName;
-		localOffset += 4;
-		s.memDir = localOffset;
-		s.scope = currentScope;
-		fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
-		push(stack, s);
-		resetRegs();
+	if (inFunc) {
+		struct symbol s = getFuncSymbol(varName);
+		if (!isNotVar(s.type)) yyerror("La variable ya existe.");
+		if (reg >= 0) yyerror("Una variable tipo texto no se puede inicializar con un número.");
+		else {
+			reg += 10;
+			s.type = 2;
+			s.name = varName;
+			funcOffset += 4;
+			s.memDir = funcOffset;
+			s.scope = currentScope;
+			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			push(funcStack, s);
+			resetRegs();
+		}
+	} else {
+		struct symbol s = getSymbol(varName);
+		if (!isNotVar(s.type)) yyerror("La variable ya existe.");
+		if (reg >= 0) yyerror("Una variable tipo texto no se puede inicializar con un número.");
+		else {
+			reg += 10;
+			s.type = 2;
+			s.name = varName;
+			localOffset += 4;
+			s.memDir = localOffset;
+			s.scope = currentScope;
+			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			push(stack, s);
+			resetRegs();
+		}
 	}
 }
 
@@ -2161,9 +2293,16 @@ void initListPositionQ(int reg){
 	if (reg < 0) yyerror("La lista solo admite valores numéricos.");
 	else {
 		listPosition += 1;
-		if (reg > 9) fprintf(fp, "\tF(R6-%i)=RR%i;\n", localOffset + listPosition*4, reg-10);
-		else {
-			fprintf(fp, "\tF(R6-%i)=R%i;\n", localOffset + listPosition*4, reg);
+		if (inFunc) {
+			if (reg > 9) fprintf(fp, "\tF(R6-%i)=RR%i;\n", funcOffset + listPosition*4, reg-10);
+			else {
+				fprintf(fp, "\tF(R6-%i)=R%i;\n", funcOffset + listPosition*4, reg);
+			}
+		} else {
+			if (reg > 9) fprintf(fp, "\tF(R6-%i)=RR%i;\n", localOffset + listPosition*4, reg-10);
+			else {
+				fprintf(fp, "\tF(R6-%i)=R%i;\n", localOffset + listPosition*4, reg);
+			}
 		}
 		
 	}
@@ -2180,26 +2319,50 @@ int getStringRegQ(char* string){
 }
 
 int getVarnameRegQ(char* varName){
-	struct symbol s = getSymbol(varName);
-	if (isNotVar(s.type)) yyerror("La variable no existe.");
-	else if (varIsInt(s.type)){
-		advanceRegister();
-		fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
-		int reg = currentReg;
-		return reg;
-	} else if (varIsFloat(s.type)){
-		advanceFloatRegister();
-		fprintf(fp, "\tRR%i=F(R6-%i);\n", currentFloatReg, s.memDir);
-		int reg = currentFloatReg + 10;
-		return reg;
-	} else if (varIsString(s.type)){
-		advanceRegister();
-		fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
-		int reg = currentReg - 10;
-		return reg;
-	} else if (varIsList(s.type)){
-		fprintf(fp, "\tR0=%i;\n", s.memDir);
-		return 100 + s.size;
+	if (inFunc) {
+		struct symbol s = getFuncSymbol(varName);
+		if (isNotVar(s.type)) yyerror("La variable no existe.");
+		else if (varIsInt(s.type)){
+			advanceRegister();
+			fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
+			int reg = currentReg;
+			return reg;
+		} else if (varIsFloat(s.type)){
+			advanceFloatRegister();
+			fprintf(fp, "\tRR%i=F(R6-%i);\n", currentFloatReg, s.memDir);
+			int reg = currentFloatReg + 10;
+			return reg;
+		} else if (varIsString(s.type)){
+			advanceRegister();
+			fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
+			int reg = currentReg - 10;
+			return reg;
+		} else if (varIsList(s.type)){
+			fprintf(fp, "\tR0=%i;\n", s.memDir);
+			return 100 + s.size;
+		}
+	} else {
+		struct symbol s = getSymbol(varName);
+		if (isNotVar(s.type)) yyerror("La variable no existe.");
+		else if (varIsInt(s.type)){
+			advanceRegister();
+			fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
+			int reg = currentReg;
+			return reg;
+		} else if (varIsFloat(s.type)){
+			advanceFloatRegister();
+			fprintf(fp, "\tRR%i=F(R6-%i);\n", currentFloatReg, s.memDir);
+			int reg = currentFloatReg + 10;
+			return reg;
+		} else if (varIsString(s.type)){
+			advanceRegister();
+			fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
+			int reg = currentReg - 10;
+			return reg;
+		} else if (varIsList(s.type)){
+			fprintf(fp, "\tR0=%i;\n", s.memDir);
+			return 100 + s.size;
+		}
 	}
 }
 
@@ -2246,29 +2409,44 @@ void initFromQ(int r1, int r2){
 		struct symbol s, t; 
 		s.name = "iter";
 		s.type = 0; 
-		localOffset += 4; 
-		s.memDir = localOffset;
-		localOffset += 4;
-		t.memDir = localOffset;		 
-		fprintf(fp, "\tI(R6-%i)=R%i;\n\tI(R6-%i)=R%i;\nL %i:\n", s.memDir, r1, t.memDir, r2, nextLabel); //init variables iter y final (limites locales) 
-		s.scope = currentScope;
-		t.scope = currentScope; 
-		push(stack, s);
-		push(stack, t);
+		if (inFunc){
+			funcOffset += 4; 
+			s.memDir = funcOffset;
+			funcOffset += 4;
+			t.memDir = funcOffset;		 
+			fprintf(fp, "\tI(R6-%i)=R%i;\n\tI(R6-%i)=R%i;\nL %i:\n", s.memDir, r1, t.memDir, r2, nextLabel); //init variables iter y final (limites locales) 
+			s.scope = currentScope;
+			t.scope = currentScope; 
+			push(funcStack, s);
+			push(funcStack, t);
+		} else {			
+			localOffset += 4; 
+			s.memDir = localOffset;
+			localOffset += 4;
+			t.memDir = localOffset;		 
+			fprintf(fp, "\tI(R6-%i)=R%i;\n\tI(R6-%i)=R%i;\nL %i:\n", s.memDir, r1, t.memDir, r2, nextLabel); //init variables iter y final (limites locales) 
+			s.scope = currentScope;
+			t.scope = currentScope; 
+			push(stack, s);
+			push(stack, t);
+		}
 		fprintf(fp, "\tR0=I(R6-%i);\n\tR1=I(R6-%i);\n\tIF(R0>R1) GT(%i);\n", s.memDir, t.memDir, nextLabel+1); //cargo y comparo				
 		nextLabel += 2;
 	}	
 }
 
 void endFromQ(int label){
-	int memDir = getSymbol("iter").memDir;
+	int memDir;
+	if (inFunc) memDir = getFuncSymbol("iter").memDir;
+	else memDir = getSymbol("iter").memDir;
 	fprintf(fp, "\tR0=I(R6-%i);\n", memDir);
 	fprintf(fp, "\tR0=R0+1;\n");
 	fprintf(fp, "\tI(R6-%i)=R0;\n", memDir);
 	fprintf(fp, "\tGT(%i);\n", label);
 	fprintf(fp, "L %i:\n", label+1);
 	inFor = 0; 
-	removeScope(stack);
+	if (inFunc) removeScope(funcStack);
+	else removeScope(stack);
 	resetRegs();
 }
 
@@ -2280,54 +2458,94 @@ void initForeachQ(char* varName, int cod){
 		int size = cod - 100;
 		struct symbol l, i, s;
 
-		localOffset += 4;
-		l.memDir = localOffset;
-		l.scope = currentScope;
-		fprintf(fp, "\tR0=R6-R0;\n\tI(R6-%i)=R0;\n", l.memDir); //en R0 está la offset base del array
+		if (inFunc) {
+			funcOffset += 4;
+			l.memDir = funcOffset;
+			l.scope = currentScope;
+			fprintf(fp, "\tR0=R6-R0;\n\tI(R6-%i)=R0;\n", l.memDir); //en R0 está la offset base del array
 
-		localOffset += 4;
-		i.memDir = localOffset;
-		i.name = "foreach";
-		fprintf(fp, "\tI(R6-%i)=0;\nL %i:\n", i.memDir, nextLabel);
-		i.scope = currentScope;
-		push(stack, i);
+			funcOffset += 4;
+			i.memDir = funcOffset;
+			i.name = "foreach";
+			fprintf(fp, "\tI(R6-%i)=0;\nL %i:\n", i.memDir, nextLabel);
+			i.scope = currentScope;
+			push(funcStack, i);
 
-		fprintf(fp, "\tR0=I(R6-%i);\n\tR1=%i;\n\tIF(R0>=R1) GT(%i);\n", i.memDir, size, nextLabel+1);
-		s.name = varName;
-		s.type = 1;
-		s.scope = currentScope;
-		localOffset += 4;
-		s.memDir = localOffset;
-		fprintf(fp, "\tR0=I(R6-%i);\n\tR0=R0+1;\n\tR0=R0*4;\n", i.memDir); //cojo el índice + 1 para acceder al array en memoria
-		fprintf(fp, "\tR1=I(R6-%i);\n\tR0=R1-R0;\n\tRR0=F(R0);\n\tF(R6-%i)=RR0;\n", l.memDir, s.memDir); //recupero la posición base y le resto el offset del array para recuperar el valor de la posición correspondiente
-		push(stack, s);
-		nextLabel += 2;
+			fprintf(fp, "\tR0=I(R6-%i);\n\tR1=%i;\n\tIF(R0>=R1) GT(%i);\n", i.memDir, size, nextLabel+1);
+			s.name = varName;
+			s.type = 1;
+			s.scope = currentScope;
+			funcOffset += 4;
+			s.memDir = funcOffset;
+			fprintf(fp, "\tR0=I(R6-%i);\n\tR0=R0+1;\n\tR0=R0*4;\n", i.memDir); //cojo el índice + 1 para acceder al array en memoria
+			fprintf(fp, "\tR1=I(R6-%i);\n\tR0=R1-R0;\n\tRR0=F(R0);\n\tF(R6-%i)=RR0;\n", l.memDir, s.memDir); //recupero la posición base y le resto el offset del array para recuperar el valor de la posición correspondiente
+			push(funcStack, s);
+			nextLabel += 2;
+
+		} else {
+			localOffset += 4;
+			l.memDir = localOffset;
+			l.scope = currentScope;
+			fprintf(fp, "\tR0=R6-R0;\n\tI(R6-%i)=R0;\n", l.memDir); //en R0 está la offset base del array
+
+			localOffset += 4;
+			i.memDir = localOffset;
+			i.name = "foreach";
+			fprintf(fp, "\tI(R6-%i)=0;\nL %i:\n", i.memDir, nextLabel);
+			i.scope = currentScope;
+			push(stack, i);
+
+			fprintf(fp, "\tR0=I(R6-%i);\n\tR1=%i;\n\tIF(R0>=R1) GT(%i);\n", i.memDir, size, nextLabel+1);
+			s.name = varName;
+			s.type = 1;
+			s.scope = currentScope;
+			localOffset += 4;
+			s.memDir = localOffset;
+			fprintf(fp, "\tR0=I(R6-%i);\n\tR0=R0+1;\n\tR0=R0*4;\n", i.memDir); //cojo el índice + 1 para acceder al array en memoria
+			fprintf(fp, "\tR1=I(R6-%i);\n\tR0=R1-R0;\n\tRR0=F(R0);\n\tF(R6-%i)=RR0;\n", l.memDir, s.memDir); //recupero la posición base y le resto el offset del array para recuperar el valor de la posición correspondiente
+			push(stack, s);
+			nextLabel += 2;
+		}
 	}
 }
 
 void endForeachQ(int label){
-	int memDir = getSymbol("foreach").memDir;	
+	int memDir; 
+	if (inFunc) memDir = getFuncSymbol("foreach").memDir;
+	else memDir = getSymbol("foreach").memDir;	
 	fprintf(fp, "\tR0=I(R6-%i);\n", memDir);
 	fprintf(fp, "\tR0=R0+1;\n");
 	fprintf(fp, "\tI(R6-%i)=R0;\n", memDir);
 	fprintf(fp, "\tGT(%i);\n", label);
 	fprintf(fp, "L %i:\n", label+1);
 	//inFor = 0; 
-	removeScope(stack);
+	if (inFunc) removeScope(funcStack);
+	else removeScope(stack);
 	resetRegs();
 }
 
 void changeSymbolType(char* varName, int type){
 	int i;
-	for (i = 0; i <= stack->top; i++){
-		if (strcmp(varName, stack->array[i].name) == 0){
-			stack->array[i].type = type;
+	if (inFunc) {
+		for (i = 0; i <= funcStack->top; i++){
+			if (strcmp(varName, funcStack->array[i].name) == 0){
+				funcStack->array[i].type = type;
+			}
+		}
+	}
+	else {		
+		for (i = 0; i <= stack->top; i++){
+			if (strcmp(varName, stack->array[i].name) == 0){
+				stack->array[i].type = type;
+			}
 		}
 	}
 }
 
 void assignRegToVar(char* varName, int reg){
-	struct symbol s = getSymbol(varName);
+	struct symbol s;
+	if (inFunc) s = getFuncSymbol(varName);
+	else s = getSymbol(varName);
 	if (isNotVar(s.type)) yyerror("La variable no existe.");
 	else if (varIsInt(s.type)) {
 		if (reg > 100 || reg < -9) yyerror("Los tipos son incompatibles.");
@@ -2348,33 +2566,57 @@ void assignRegToVar(char* varName, int reg){
 }
 
 int accessListQ(char* varName, int reg){
-	struct symbol l = getSymbol(varName);
+	struct symbol l;
+	if (inFunc) l = getFuncSymbol(varName);
+	else l = getSymbol(varName);
 	if (!varIsList(l.type)) yyerror("Solo se puede acceder a posiciones de listas.");	
 	else {
 		if (reg < 0 || reg > 9) yyerror("Solo se puede acceder a una posición entera de una lista.");
 		else {
-			fprintf(fp, "/////////////////Spillmode: %i\n", spillMode);
 			advanceFloatRegister();
 			int aux1 = reg + 1;
 			if (aux1 == 5) aux1 = 0;
-			localOffset += 4;
-			fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, aux1);			
-			int aux2 = aux1 + 1;
-			if (aux2 == 5) aux2 = 0;
-			localOffset += 4;
-			fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, aux2);
-			fprintf(fp, "\tR%i=%i;\n", aux1, l.size);
-			fprintf(fp, "\tR%i=R%i;\n", aux2, reg);
-			fprintf(fp, "\tIF(R%i<0) GT(-2);\n", aux2);
-			fprintf(fp, "\tIF(R%i>=R%i) GT(-2);\n", aux2, aux1); //Se sale del límite del array
-			fprintf(fp, "\tR%i=4*R%i;\n", aux1, aux2);
-			fprintf(fp, "\tR%i=R%i+4;\n", aux1, aux1);
-			fprintf(fp, "\tR%i=%i+R%i;\n", aux1, l.memDir, aux1);
-			fprintf(fp, "\tRR%i=F(R6-R%i);\n", currentFloatReg, aux1);
-			fprintf(fp, "\tR%i=I(R6-%i);\n", aux2, localOffset);
-			localOffset -= 4;
-			fprintf(fp, "\tR%i=I(R6-%i);\n", aux1, localOffset);
-			localOffset -= 4;
+			if (inFunc){
+				funcOffset += 4;
+				fprintf(fp, "\tI(R6-%i)=R%i;\n", funcOffset, aux1);			
+				int aux2 = aux1 + 1;
+				if (aux2 == 5) aux2 = 0;
+				funcOffset += 4;
+				fprintf(fp, "\tI(R6-%i)=R%i;\n", funcOffset, aux2);
+				fprintf(fp, "\tR%i=%i;\n", aux1, l.size);
+				fprintf(fp, "\tR%i=R%i;\n", aux2, reg);
+				fprintf(fp, "\tIF(R%i<0) GT(-2);\n", aux2);
+				fprintf(fp, "\tIF(R%i>=R%i) GT(-2);\n", aux2, aux1); //Se sale del límite del array
+				fprintf(fp, "\tR%i=4*R%i;\n", aux1, aux2);
+				fprintf(fp, "\tR%i=R%i+4;\n", aux1, aux1);
+				fprintf(fp, "\tR%i=%i+R%i;\n", aux1, l.memDir, aux1);
+				fprintf(fp, "\tRR%i=F(R6-R%i);\n", currentFloatReg, aux1);
+				fprintf(fp, "\tR%i=I(R6-%i);\n", aux2, funcOffset);
+				funcOffset -= 4;
+				fprintf(fp, "\tR%i=I(R6-%i);\n", aux1, funcOffset);
+				funcOffset -= 4;
+			} else {
+				localOffset += 4;
+				fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, aux1);			
+				int aux2 = aux1 + 1;
+				if (aux2 == 5) aux2 = 0;
+				localOffset += 4;
+				fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, aux2);
+				fprintf(fp, "\tR%i=%i;\n", aux1, l.size);
+				fprintf(fp, "\tR%i=R%i;\n", aux2, reg);
+				fprintf(fp, "\tIF(R%i<0) GT(-2);\n", aux2);
+				fprintf(fp, "\tIF(R%i>=R%i) GT(-2);\n", aux2, aux1); //Se sale del límite del array
+				fprintf(fp, "\tR%i=4*R%i;\n", aux1, aux2);
+				fprintf(fp, "\tR%i=R%i+4;\n", aux1, aux1);
+				fprintf(fp, "\tR%i=%i+R%i;\n", aux1, l.memDir, aux1);
+				fprintf(fp, "\tRR%i=F(R6-R%i);\n", currentFloatReg, aux1);
+				fprintf(fp, "\tR%i=I(R6-%i);\n", aux2, localOffset);
+				localOffset -= 4;
+				fprintf(fp, "\tR%i=I(R6-%i);\n", aux1, localOffset);
+				localOffset -= 4;
+			}
+			
+			
 			if (spillMode) reduceRegister();
 			else currentReg--;
 		}
@@ -2382,31 +2624,140 @@ int accessListQ(char* varName, int reg){
 	return currentFloatReg+10;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////hacia abajo es código viejo que hay que limpiar
-
-void initTextQ(char* string){
-	fprintf(fp, "STAT(%i)\n", nextStatBlock);
-	fprintf(fp, "\tSTR(%i, \"%s\");\n", memoryDir, string);
-	fprintf(fp, "CODE(%i)\n", nextStatBlock++);
-	fprintf(fp, "\tI(R7-%i)=%i;\n", localOffset, memoryDir);
+int initFunctionQ(char* funcName){
+	funcStack = createStack(100);
+	struct symbol s = getSymbol(funcName);
+	if (s.type != -1) yyerror("Ya existe una variable o función con este nombre.");
+	else if (currentScope > 0) yyerror("Solo se puede definir una función en el ámbito global.");
+	else {
+		inFunc = 1;
+		int funcLabel = nextLabel;
+		nextLabel++;
+		fprintf(fp, "\tGT(%i);\n", nextLabel);
+		fprintf(fp, "L %i:\n", funcLabel);
+		funcOffset += 4;
+		nextLabel++;
+		return funcLabel;
+	}
 }
 
-void assignTextQ(char* string, int offset){
-	fprintf(fp, "STAT(%i)\n", nextStatBlock);
-	fprintf(fp, "\tSTR(%i, \"%s\");\n", memoryDir, string);
-	fprintf(fp, "CODE(%i)\n", nextStatBlock++);
-	fprintf(fp, "\tI(R7-%i)=%i;\n", offset, memoryDir);
+void initFuncParamQ(char* varName){
+	struct symbol s = getFuncSymbol(varName);
+	if (s.type != -1) yyerror("No se pueden tener dos parámetros con el mismo nombre.");
+	else {
+		s.name = varName;
+		s.type = 0;
+		s.scope = currentScope;
+		funcOffset += 4;
+		s.memDir = funcOffset;
+		funcParams++;
+		push(funcStack, s);	
+	}
 }
 
-void loadAndPrintQ(char* string){
-	int length = getStringLength(string);
-	fprintf(fp, "STAT(%i)\n", nextStatBlock);
-	fprintf(fp, "\tSTR(%i, \"%s\");\n", memoryDir -= length, string);
-	fprintf(fp, "CODE(%i)\n", nextStatBlock++);
-	fprintf(fp, "\tR1=%i;\n", memoryDir);
-	fprintf(fp, "\tR0=%i;\n", nextLabel);
-	fprintf(fp, "\tGT(putf_);\n");
+void symbolFunctionQ(char* funcName, int funcLabel){
+	struct symbol s;
+	s.name = funcName;
+	s.memDir = funcLabel;
+	s.size = funcParams;
+	s.type = 4;
+	push(stack, s);
+}
+
+void endFunctionQ(int funcLabel){
+	inFunc = 0;
+	funcParams = 0;
+	funcOffset = 0;
+	fprintf(fp, "\tR0=I(R6-4);\n");
+	fprintf(fp, "\tGT(R0);\n");
+	fprintf(fp, "L %i:\n", funcLabel + 1);
+}
+
+void saveRegs(){
+	if (inFunc) {
+		funcOffset += 4;
+		fprintf(fp, "\tI(R6-%i)=R0;\n", funcOffset += 4);
+		fprintf(fp, "\tI(R6-%i)=R1;\n", funcOffset += 4);
+		fprintf(fp, "\tI(R6-%i)=R2;\n", funcOffset += 4);
+		fprintf(fp, "\tI(R6-%i)=R3;\n", funcOffset += 4);
+		fprintf(fp, "\tI(R6-%i)=R4;\n", funcOffset += 4);
+		fprintf(fp, "\tF(R6-%i)=RR0;\n", funcOffset += 4);
+		fprintf(fp, "\tF(R6-%i)=RR1;\n", funcOffset += 4);
+		fprintf(fp, "\tF(R6-%i)=RR2;\n", funcOffset += 4);
+		fprintf(fp, "\tF(R6-%i)=RR3;\n", funcOffset);
+	} else {
+		localOffset += 4;
+		fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset += 4);
+		fprintf(fp, "\tI(R6-%i)=R1;\n", localOffset += 4);
+		fprintf(fp, "\tI(R6-%i)=R2;\n", localOffset += 4);
+		fprintf(fp, "\tI(R6-%i)=R3;\n", localOffset += 4);
+		fprintf(fp, "\tI(R6-%i)=R4;\n", localOffset += 4);
+		fprintf(fp, "\tF(R6-%i)=RR0;\n", localOffset += 4);
+		fprintf(fp, "\tF(R6-%i)=RR1;\n", localOffset += 4);
+		fprintf(fp, "\tF(R6-%i)=RR2;\n", localOffset += 4);
+		fprintf(fp, "\tF(R6-%i)=RR3;\n", localOffset);
+	}
+}
+
+void loadRegs(){
+	if (inFunc) {
+		fprintf(fp, "\tRR3=F(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tRR2=F(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tRR1=F(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tRR0=F(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR4=I(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR3=I(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR2=I(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR1=I(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR0=I(R6-%i);\n", funcOffset -= 4);
+	} else {
+		fprintf(fp, "\tRR3=F(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tRR2=F(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tRR1=F(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tRR0=F(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR4=I(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR3=I(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR2=I(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR1=I(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR0=I(R6-%i);\n", localOffset -= 4);
+	}	
+}
+
+int callFunctionQ(char* funcName){
+	struct symbol f = getSymbol(funcName);
+	if (isNotVar(f.type)) yyerror("Esta función no ha sido definida previamente.");
+	if (!varIsFunc(f.type)) yyerror("No se puede llamar a una variable que no sea función.");
+	else {
+		if (1 != f.size) yyerror("El número de parámetros no coincide con el de la función.");
+		saveRegs();
+		if (inFunc) fprintf(fp, "\tR6=R6-%i;\n", funcOffset);
+		else fprintf(fp, "\tR6=R6-%i;\n", localOffset);
+		fprintf(fp, "\tI(R6-4)=%i;\n", nextLabel);
+		return f.memDir;
+	}
+}
+
+void leaveFunctionQ(int label){	
+	fprintf(fp, "\tGT(%i);\n", label);
 	fprintf(fp, "L %i:\n", nextLabel++);
+	if (inFunc) fprintf(fp, "\tR6=R6+%i;\n", funcOffset);	
+	else fprintf(fp, "\tR6=R6+%i;\n", localOffset);
+	loadRegs();
+	funcAssignedParams = 0;
+}
+
+void assignParamQ(int reg){
+	if (reg < 0 || reg > 100) yyerror("Solo se puede asignar a funciones valores numéricos.");
+	else if (reg > 9){		
+		funcAssignedParams++;
+		int mem = 4 + funcAssignedParams*4;
+		reg -= 10;
+		fprintf(fp, "\tF(R6-%i)=RR%i;\n", mem, reg);
+	} else {		
+		funcAssignedParams++;
+		int mem = 4 + funcAssignedParams*4;
+		fprintf(fp, "\tI(R6-%i)=R%i;\n", mem, reg);
+	}
 }
 
 void printStringQ(int memDir){
@@ -2416,123 +2767,8 @@ void printStringQ(int memDir){
 	fprintf(fp, "L %i:\n", nextLabel++);
 } 
 
-void printQVariable(char* varName){
-	struct symbol s = getSymbol(varName);
-	if (s.type == -1) yyerror("La variable no existe.");
-	else if (s.type == 2) printStringQ(s.memDir);
-	else if (s.type == 1) {
-		fprintf(fp, "\tRR1=F(R7-%i);\n", s.memDir);
-		fprintf(fp, "\tR0=%i;\n", nextLabel);
-		fprintf(fp, "\tGT(printfloat_);\n");
-		fprintf(fp, "L %i:\n", nextLabel++);
-	} else {
-		fprintf(fp, "\tR1=I(R7-%i);\n", s.memDir);
-		fprintf(fp, "\tR0=%i;\n", nextLabel);
-		fprintf(fp, "\tGT(printint_);\n");
-		fprintf(fp, "L %i:\n", nextLabel++);
-	}
-}
+//para el return guardar codigo de salida en algun registro y cuando entra a función hay que guardar los registros en memoria por si las moscas.
 
-void printQListAccess(){
-	fprintf(fp, "\tRR1=RR0;\n");
-	fprintf(fp, "\tR0=%i;\n", nextLabel);
-	fprintf(fp, "\tGT(printfloat_);\n");
-	fprintf(fp, "L %i:\n", nextLabel++);
-}
-
-
-
-void getNegationQ(int neg){
-	if (neg == 0) fprintf(fp, "!");
-}
-
-void getComparatorQ(int comp){
-	char* strComp;
-	switch (comp){
-		case 0:
-			strComp = ">";
-			break;
-		case 1:
-			strComp = "<";
-			break;
-		case 2:
-			strComp = "==";
-			break;
-		case 3:
-			strComp = ">=";
-			break;
-		case 4:
-			strComp = "<=";
-			break;
-		case 5:
-			strComp = "!=";
-			break;
-		default:
-			break;
-	}
-	fprintf(fp, "%s", strComp);
-}
-
-
-
-void listAccessVar(char* listName, char* accessName){
-	struct symbol l = getSymbol(listName);
-	if (l.type != 3) yyerror("La variable no es una lista");
-	else {
-		struct symbol s = getSymbol(accessName);
-		if (s.type != 0) yyerror("Solo se puede acceder a una lista con un entero.");
-		else {
-			fprintf(fp, "\tR0=%i;\n", l.size);
-			fprintf(fp, "\tR1=I(R7-%i);\n", s.memDir);
-			fprintf(fp, "\tIF(R1<0) GT(-2);\n");
-			fprintf(fp, "\tIF(R1>=R0) GT(-2);\n"); //Se sale del límite del array
-			fprintf(fp, "\tR0=4*R1;\n");
-			fprintf(fp, "\tR0=R0+4;\n");
-			fprintf(fp, "\tR0=%i+R0;\n", l.memDir);
-			fprintf(fp, "\tRR0=F(R7-R0);\n");
-		}
-	}
-}
-
-void listAccessInt(char* listName, int accessValue){
-	struct symbol l = getSymbol(listName);
-	if (l.type != 3) yyerror("La variable no es una lista");
-	else {
-		fprintf(fp, "\tR0=%i;\n", l.size);
-		fprintf(fp, "\tR1=%i;\n", accessValue);
-		fprintf(fp, "\tIF(R1<0) GT(-2);\n");
-		fprintf(fp, "\tIF(R1>=R0) GT(-2);\n"); //Se sale del límite del array
-		fprintf(fp, "\tR0=4*R1;\n");
-		fprintf(fp, "\tR0=R0+4;\n");
-		fprintf(fp, "\tR0=%i+R0;\n", l.memDir);
-		fprintf(fp, "\tRR0=F(R7-R0);\n");		
-	}
-}
-
-struct symbol initForeachVar(char* localVar){	
-	struct symbol s;
-	s.name = localVar;
-	localOffset += 4;
-	s.memDir = localOffset;
-	s.type = 1;
-	s.scope = currentScope;
-	push(stack, s);
-	return s;
-}
-
-int foreachVarQ(char* localVar, char* listName){ //////////////////////////////////////////////////////////////////////////////////////////////
-	struct symbol l = getSymbol(listName);
-	if (l.type != 3) yyerror("La variable no es una lista");	
-	struct symbol s = initForeachVar(localVar);
-	fprintf(fp, "\tR5=1;\nL %i:\n", nextLabel); 
-	int endLabel = nextLabel;
-	nextLabel += 2;
-	fprintf(fp, "\tR1=%i;\n\tIF(R5>R1) GT(%i);\n", l.size, endLabel + 1);
-	fprintf(fp, "\tR0=4*R5;\n");
-	fprintf(fp, "\tR0=%i+R0;\n", l.memDir);
-	fprintf(fp, "\tR0=I(R7-R0);\n\tI(R7-%i)=R0;\n", s.memDir);
-	return endLabel;
-}
 
 char* removeQuotes(char* s){
 	char* res = s; 	
@@ -2546,23 +2782,23 @@ void yyerror(const char* mens){
 	exit(-1);
 }
 
-char* notImplemented(){
-	char* error = "Not implemented yet";
-	return error;
-}
-
-void reduceScope(){
-	int i;
-	for (i = stack->top; i >= 0; i--){
-		if (stack->array[i].scope == currentScope) stack->top--;
-	}
-}
-
 struct symbol getSymbol(char* varName){
 	int i;
 	for (i = 0; i <= stack->top; i++){
 		if (strcmp(varName, stack->array[i].name) == 0){
 			return stack->array[i];
+		}
+	}
+	struct symbol a;
+	a.type = -1;
+	return a;
+}
+
+struct symbol getFuncSymbol(char* varName){
+	int i;
+	for (i = 0; i <= funcStack->top; i++){
+		if (strcmp(varName, funcStack->array[i].name) == 0){
+			return funcStack->array[i];
 		}
 	}
 	struct symbol a;
@@ -2608,7 +2844,8 @@ void pop(struct Stack* stack)
 void removeScope(struct Stack* stack){
 	while(currentScope==stack->array[stack->top].scope){
 		stack->top--;
-		localOffset -= 4;
+		if (inFunc) funcOffset -= 4;
+		else localOffset -= 4;
 	}
 	currentScope--;
 } 
