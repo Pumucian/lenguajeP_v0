@@ -104,25 +104,27 @@ Gramática
 
    64 funcParam: VARNAME $@12 ',' funcParam
    65          | VARNAME
+   66          | %empty
 
-   66 @13: %empty
+   67 @13: %empty
 
-   67 $@14: %empty
+   68 $@14: %empty
 
-   68 function: VARNAME OPEN_PAREN @13 assignParams $@14 CLOSE_PAREN
+   69 function: VARNAME OPEN_PAREN @13 assignParams $@14 CLOSE_PAREN
 
-   69 $@15: %empty
+   70 $@15: %empty
 
-   70 assignParams: expr $@15 ',' assignParams
-   71             | expr
+   71 assignParams: expr $@15 ',' assignParams
+   72             | expr
+   73             | %empty
 
-   72 returnClause: RETURN expr
+   74 returnClause: RETURN expr
 
 
 Terminales con las reglas donde aparecen
 
 $end (0) 0
-',' (44) 22 64 70
+',' (44) 22 64 71
 '=' (61) 18
 error (256)
 TEXT (258) 16
@@ -135,7 +137,7 @@ DIVIDED_BY (264) 29
 MOD (265) 30
 INT (266) 35
 FLOAT (267) 36
-VARNAME (268) 15 16 20 24 25 34 57 58 62 64 65 68
+VARNAME (268) 15 16 20 24 25 34 57 58 62 64 65 69
 STRING (269) 37
 IS (270) 17 47
 IF (271) 42
@@ -159,11 +161,11 @@ OR (288)
 FOREACH (289) 57
 IN (290) 57
 FUNC (291) 62
-RETURN (292) 72
+RETURN (292) 74
 OPEN_BRACKET (293) 25 58
 CLOSE_BRACKET (294) 25 58
-OPEN_PAREN (295) 31 62 68
-CLOSE_PAREN (296) 31 62 68
+OPEN_PAREN (295) 31 62 69
+CLOSE_PAREN (296) 31 62 69
 
 
 No terminales con las reglas donde aparecen
@@ -194,7 +196,7 @@ assign (55)
     en la izquierda: 24 25, en la derecha: 4
 expr (56)
     en la izquierda: 26 27 28 29 30 31 32 33 34 35 36 37, en la derecha:
-    15 16 22 23 24 25 26 27 28 29 30 31 38 42 54 57 58 70 71 72
+    15 16 22 23 24 25 26 27 28 29 30 31 38 42 54 57 58 71 72 74
 show (57)
     en la izquierda: 38 39, en la derecha: 5
 ifClause (58)
@@ -230,21 +232,21 @@ $@10 (72)
 $@11 (73)
     en la izquierda: 61, en la derecha: 62
 funcParam (74)
-    en la izquierda: 64 65, en la derecha: 62 64
+    en la izquierda: 64 65 66, en la derecha: 62 64
 $@12 (75)
     en la izquierda: 63, en la derecha: 64
 function (76)
-    en la izquierda: 68, en la derecha: 11 33
+    en la izquierda: 69, en la derecha: 11 33
 @13 (77)
-    en la izquierda: 66, en la derecha: 68
+    en la izquierda: 67, en la derecha: 69
 $@14 (78)
-    en la izquierda: 67, en la derecha: 68
+    en la izquierda: 68, en la derecha: 69
 assignParams (79)
-    en la izquierda: 70 71, en la derecha: 68 70
+    en la izquierda: 71 72 73, en la derecha: 69 71
 $@15 (80)
-    en la izquierda: 69, en la derecha: 70
+    en la izquierda: 70, en la derecha: 71
 returnClause (81)
-    en la izquierda: 72, en la derecha: 10
+    en la izquierda: 74, en la derecha: 10
 
 
 Estado 0
@@ -320,7 +322,7 @@ Estado 6
 
    24 assign: VARNAME . asignator expr
    25       | VARNAME . OPEN_BRACKET expr CLOSE_BRACKET asignator expr
-   68 function: VARNAME . OPEN_PAREN @13 assignParams $@14 CLOSE_PAREN
+   69 function: VARNAME . OPEN_PAREN @13 assignParams $@14 CLOSE_PAREN
 
     IS            desplazar e ir al estado 29
     OPEN_BRACKET  desplazar e ir al estado 30
@@ -394,7 +396,7 @@ Estado 11
 
 Estado 12
 
-   72 returnClause: RETURN . expr
+   74 returnClause: RETURN . expr
 
     INT         desplazar e ir al estado 34
     FLOAT       desplazar e ir al estado 35
@@ -549,9 +551,9 @@ Estado 30
 
 Estado 31
 
-   68 function: VARNAME OPEN_PAREN . @13 assignParams $@14 CLOSE_PAREN
+   69 function: VARNAME OPEN_PAREN . @13 assignParams $@14 CLOSE_PAREN
 
-    $default  reduce usando la regla 66 (@13)
+    $default  reduce usando la regla 67 (@13)
 
     @13  ir al estado 51
 
@@ -596,7 +598,7 @@ Estado 36
 
    34 expr: VARNAME .
    58 listAccess: VARNAME . OPEN_BRACKET expr CLOSE_BRACKET
-   68 function: VARNAME . OPEN_PAREN @13 assignParams $@14 CLOSE_PAREN
+   69 function: VARNAME . OPEN_PAREN @13 assignParams $@14 CLOSE_PAREN
 
     OPEN_BRACKET  desplazar e ir al estado 53
     OPEN_PAREN    desplazar e ir al estado 31
@@ -719,7 +721,7 @@ Estado 46
    28     | expr . TIMES expr
    29     | expr . DIVIDED_BY expr
    30     | expr . MOD expr
-   72 returnClause: RETURN expr .
+   74 returnClause: RETURN expr .
 
     PLUS        desplazar e ir al estado 55
     MINUS       desplazar e ir al estado 56
@@ -727,7 +729,7 @@ Estado 46
     DIVIDED_BY  desplazar e ir al estado 58
     MOD         desplazar e ir al estado 59
 
-    $default  reduce usando la regla 72 (returnClause)
+    $default  reduce usando la regla 74 (returnClause)
 
 
 Estado 47
@@ -788,13 +790,15 @@ Estado 50
 
 Estado 51
 
-   68 function: VARNAME OPEN_PAREN @13 . assignParams $@14 CLOSE_PAREN
+   69 function: VARNAME OPEN_PAREN @13 . assignParams $@14 CLOSE_PAREN
 
     INT         desplazar e ir al estado 34
     FLOAT       desplazar e ir al estado 35
     VARNAME     desplazar e ir al estado 36
     STRING      desplazar e ir al estado 37
     OPEN_PAREN  desplazar e ir al estado 38
+
+    $default  reduce usando la regla 73 (assignParams)
 
     expr          ir al estado 69
     listAccess    ir al estado 40
@@ -1049,8 +1053,8 @@ Estado 69
    28     | expr . TIMES expr
    29     | expr . DIVIDED_BY expr
    30     | expr . MOD expr
-   70 assignParams: expr . $@15 ',' assignParams
-   71             | expr .
+   71 assignParams: expr . $@15 ',' assignParams
+   72             | expr .
 
     PLUS        desplazar e ir al estado 55
     MINUS       desplazar e ir al estado 56
@@ -1058,17 +1062,17 @@ Estado 69
     DIVIDED_BY  desplazar e ir al estado 58
     MOD         desplazar e ir al estado 59
 
-    CLOSE_PAREN  reduce usando la regla 71 (assignParams)
-    $default     reduce usando la regla 69 ($@15)
+    CLOSE_PAREN  reduce usando la regla 72 (assignParams)
+    $default     reduce usando la regla 70 ($@15)
 
     $@15  ir al estado 91
 
 
 Estado 70
 
-   68 function: VARNAME OPEN_PAREN @13 assignParams . $@14 CLOSE_PAREN
+   69 function: VARNAME OPEN_PAREN @13 assignParams . $@14 CLOSE_PAREN
 
-    $default  reduce usando la regla 67 ($@14)
+    $default  reduce usando la regla 68 ($@14)
 
     $@14  ir al estado 92
 
@@ -1275,6 +1279,8 @@ Estado 88
 
     VARNAME  desplazar e ir al estado 97
 
+    $default  reduce usando la regla 66 (funcParam)
+
     funcParam  ir al estado 98
 
 
@@ -1311,14 +1317,14 @@ Estado 90
 
 Estado 91
 
-   70 assignParams: expr $@15 . ',' assignParams
+   71 assignParams: expr $@15 . ',' assignParams
 
     ','  desplazar e ir al estado 102
 
 
 Estado 92
 
-   68 function: VARNAME OPEN_PAREN @13 assignParams $@14 . CLOSE_PAREN
+   69 function: VARNAME OPEN_PAREN @13 assignParams $@14 . CLOSE_PAREN
 
     CLOSE_PAREN  desplazar e ir al estado 103
 
@@ -1428,13 +1434,15 @@ Estado 101
 
 Estado 102
 
-   70 assignParams: expr $@15 ',' . assignParams
+   71 assignParams: expr $@15 ',' . assignParams
 
     INT         desplazar e ir al estado 34
     FLOAT       desplazar e ir al estado 35
     VARNAME     desplazar e ir al estado 36
     STRING      desplazar e ir al estado 37
     OPEN_PAREN  desplazar e ir al estado 38
+
+    $default  reduce usando la regla 73 (assignParams)
 
     expr          ir al estado 69
     listAccess    ir al estado 40
@@ -1444,9 +1452,9 @@ Estado 102
 
 Estado 103
 
-   68 function: VARNAME OPEN_PAREN @13 assignParams $@14 CLOSE_PAREN .
+   69 function: VARNAME OPEN_PAREN @13 assignParams $@14 CLOSE_PAREN .
 
-    $default  reduce usando la regla 68 (function)
+    $default  reduce usando la regla 69 (function)
 
 
 Estado 104
@@ -1501,9 +1509,9 @@ Estado 109
 
 Estado 110
 
-   70 assignParams: expr $@15 ',' assignParams .
+   71 assignParams: expr $@15 ',' assignParams .
 
-    $default  reduce usando la regla 70 (assignParams)
+    $default  reduce usando la regla 71 (assignParams)
 
 
 Estado 111
@@ -1588,6 +1596,8 @@ Estado 114
    64 funcParam: VARNAME $@12 ',' . funcParam
 
     VARNAME  desplazar e ir al estado 97
+
+    $default  reduce usando la regla 66 (funcParam)
 
     funcParam  ir al estado 120
 

@@ -229,13 +229,15 @@ initFunction:
 	FUNC VARNAME {$<entero>$ = initFunctionQ($2);} OPEN_PAREN funcParam CLOSE_PAREN {symbolFunctionQ($2, $<entero>3);} lenguajeP {endFunctionQ($2, $<entero>3);} ENDFUNC;
 funcParam:
 	VARNAME {initFuncParamQ($1);} ',' funcParam
-	| VARNAME {initFuncParamQ($1);};
+	| VARNAME {initFuncParamQ($1);}
+	|;
 
 function:
-	VARNAME OPEN_PAREN {$<entero>$ = callFunctionQ($1);} assignParams {leaveFunctionQ($<entero>3, $1);} CLOSE_PAREN {$$ = returnFunctionQ($1);}; 
+	VARNAME OPEN_PAREN {$<entero>$ = callFunctionQ($1);} assignParams {leaveFunctionQ($<entero>3, $1);} CLOSE_PAREN {$$ = returnFunctionQ($1);};
 assignParams:
 	expr {assignParamQ($1);} ',' assignParams
-	| expr {assignParamQ($1);};
+	| expr {assignParamQ($1);}
+	|;
 
 returnClause:
 	RETURN expr {returnClauseQ($2);};

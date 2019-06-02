@@ -1,4 +1,4 @@
-func dameundos(a)
+func dameundos()
 	return 2
 endfunc
 
@@ -9,7 +9,7 @@ func funcion (a)
 	Text s2 = "Adios mundo"
 	show s
 	b is (1 + 4) * (5 + (2 + (2 + (2 + (2 + (2 + (2 + (2 + (2 + (4 * 3))))))))) + 6) * (7 + 8) * (9 + 10) * (11 + 12)
-	Num c is (1. + 4.) * (5 + (2 + (2. + (2 + (dameundos(213) + (2 + (lista[0] + (a + (2. + (4 * 3.))))))))) + 6.) * (7 + 8.) * (9 + 10.) * (11. + 12)
+	Num c is (1. + 4.) * (5 + (2 + (2. + (2 + (dameundos() + (2 + (lista[0] + (a + (2. + (4 * 3.))))))))) + 6.) * (7 + 8.) * (9 + 10.) * (11. + 12)
 	if a is 3 + 2 * 4 then show "if correcto" done
 	from 4 to 6 do show iter done
 	show b
