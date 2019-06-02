@@ -2020,12 +2020,12 @@ int main(int argc, char** argv) {
 }
 
 void advanceRegister(){
-	fprintf(fp, "///////////////////////Spillmode: %i\n", spillMode);
 	if (currentReg == 4) {
 		currentReg = 0;
 		if (spillMode) spillRegs++;
 		spillMode = 1;
 		if (spilled[0] != 0) {
+			fprintf(fp, "\tR7=R7-4;\n");
 			if (inFunc) {
 				funcOffset += 4;
 				fprintf(fp, "\tI(R6-%i)=R0;\n", funcOffset);
@@ -2042,6 +2042,7 @@ void advanceRegister(){
 		if (spillMode) {
 			if (spilled[currentReg] != 0){				
 				spillRegs++;
+				fprintf(fp, "\tR7=R7-4;\n");
 				if (inFunc) {
 					funcOffset += 4;
 					fprintf(fp, "\tI(R6-%i)=R%i;\n", funcOffset, currentReg);
@@ -2049,7 +2050,7 @@ void advanceRegister(){
 					localOffset += 4;
 					fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, currentReg);
 				}
-			}
+			}	
 			spilled[currentReg] = 1;	
 		}
 	}
@@ -2070,26 +2071,28 @@ void advanceFloatRegister(){
 		currentFloatReg = 0;
 		if (floatSpillMode) floatSpillRegs++;
 		floatSpillMode = 1;
+		fprintf(fp, "\tR7=R7-4;\n");
 		if (inFunc){
 			funcOffset += 4;
 			if (floatSpilled[0] != 0) fprintf(fp, "\tF(R6-%i)=RR0;\n", funcOffset);
 		} else {
 			localOffset += 4;
 			if (floatSpilled[0] != 0) fprintf(fp, "\tF(R6-%i)=RR0;\n", localOffset);
-		}
+		}	
 	}
 	else {
 		currentFloatReg++;
 		if (floatSpillMode) {
 			if (floatSpilled[currentFloatReg] != 0){				
 				floatSpillRegs++;
+				fprintf(fp, "\tR7=R7-4;\n");
 				if (inFunc) {
 					funcOffset += 4;
 					fprintf(fp, "\tF(R6-%i)=RR%i;\n", funcOffset, currentFloatReg);
 				} else {
 					localOffset += 4;
 					fprintf(fp, "\tF(R6-%i)=RR%i;\n", localOffset, currentFloatReg);
-				}
+				}	
 			}
 			floatSpilled[currentFloatReg] = 1;	
 		}
@@ -2134,6 +2137,7 @@ void floatSpill(int r1, int r2){
 	if (floatSpillMode){		
 		if (lastFloatRegSpilled == -1) lastFloatRegSpilled = r2;
 		else if (r1 == lastFloatRegSpilled){
+			fprintf(fp, "\tR7=R7-4;\n");	
 			if (inFunc){
 				fprintf(fp, "\tRR%i=F(R6-%i);\n", r1, funcOffset);
 				funcOffset -= 4;
@@ -2155,13 +2159,14 @@ void intSpill(int r1, int r2){
 	if (spillMode){		
 		if (lastRegSpilled == -1) lastRegSpilled = r2;
 		else if (r1 == lastRegSpilled){
+			fprintf(fp, "\tR7=R7-4;\n");
 			if (inFunc){
 				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, funcOffset);
 				funcOffset -= 4;
 			} else {
 				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, localOffset);
 				localOffset -= 4;
-			}						
+			}							
 			if (spillRegs > 0) {spillRegs--; reduceLastRegSpilled();}
 			else {
 				lastRegSpilled = -1;
@@ -2205,8 +2210,10 @@ void initQFile(){
 	fprintf(fp, "\tSTR(%i, \"%%f\");\n", memoryDir -= 4);
 	fprintf(fp, "\tSTR(%i, \"\");\n", memoryDir -= 4);
 	emptyStringDir = memoryDir;
-	fprintf(fp, "CODE(0)\n");
-	fprintf(fp, "\tR6=R7-4;\n");
+	fprintf(fp, "CODE(0)\n");	
+	fprintf(fp, "\tR7=R7-4;\n");
+	fprintf(fp, "\tR6=R7;\n");
+	fprintf(fp, "\tR5=R7;\n");
 }
 
 void resetRegs(){
@@ -2231,6 +2238,7 @@ void initNumVarQ(char* varName, int reg){
 		if (!isNotVar(s.type)) yyerror("La variable ya existe.");
 		if (reg < 0) yyerror("Una variable numérica no puede inicializarse con una String");
 		if (reg > 9) {
+			fprintf(fp, "\tR7=R7-4;\n");
 			reg -= 10;
 			s.type = 1;
 			s.name = varName;
@@ -2241,6 +2249,7 @@ void initNumVarQ(char* varName, int reg){
 			push(funcStack, s);
 			resetRegs();
 		} else {
+			fprintf(fp, "\tR7=R7-4;\n");
 			s.type = 0;
 			s.name = varName;
 			funcOffset += 4;
@@ -2255,6 +2264,7 @@ void initNumVarQ(char* varName, int reg){
 		if (!isNotVar(s.type)) yyerror("La variable ya existe.");
 		if (reg < 0) yyerror("Una variable numérica no puede inicializarse con una String"); // es string
 		if (reg > 9) {
+			fprintf(fp, "\tR7=R7-4;\n");
 			reg -= 10;
 			s.type = 1;
 			s.name = varName;
@@ -2265,6 +2275,7 @@ void initNumVarQ(char* varName, int reg){
 			push(stack, s);
 			resetRegs();
 		} else {
+			fprintf(fp, "\tR7=R7-4;\n");
 			s.type = 0;
 			s.name = varName;
 			localOffset += 4;
@@ -2292,6 +2303,7 @@ void initTextVarQ(char* varName, int reg){
 		if (!isNotVar(s.type)) yyerror("La variable ya existe.");
 		if (reg >= 0) yyerror("Una variable tipo texto no se puede inicializar con un número.");
 		else {
+			fprintf(fp, "\tR7=R7-4;\n");
 			reg += 10;
 			s.type = 2;
 			s.name = varName;
@@ -2307,6 +2319,7 @@ void initTextVarQ(char* varName, int reg){
 		if (!isNotVar(s.type)) yyerror("La variable ya existe.");
 		if (reg >= 0) yyerror("Una variable tipo texto no se puede inicializar con un número.");
 		else {
+			fprintf(fp, "\tR7=R7-4;\n");
 			reg += 10;
 			s.type = 2;
 			s.name = varName;
@@ -2324,6 +2337,7 @@ void initListPositionQ(int reg){
 	if (reg < 0) yyerror("La lista solo admite valores numéricos.");
 	else {
 		listPosition += 1;
+		fprintf(fp, "\tR7=R7-4;\n");
 		if (inFunc) {
 			if (reg > 9) fprintf(fp, "\tF(R6-%i)=RR%i;\n", funcOffset + listPosition*4, reg-10);
 			else {
@@ -2440,6 +2454,7 @@ void initFromQ(int r1, int r2){
 		struct symbol s, t; 
 		s.name = "iter";
 		s.type = 0; 
+		fprintf(fp, "\tR7=R7-8;\n");
 		if (inFunc){
 			funcOffset += 4; 
 			s.memDir = funcOffset;
@@ -2488,6 +2503,8 @@ void initForeachQ(char* varName, int cod){
 		currentScope++;
 		int size = cod - 100;
 		struct symbol l, i, s;
+
+		fprintf(fp, "\tR7=R7-12;\n");
 
 		if (inFunc) {
 			funcOffset += 4;
@@ -2549,7 +2566,7 @@ void endForeachQ(int label){
 	fprintf(fp, "\tI(R6-%i)=R0;\n", memDir);
 	fprintf(fp, "\tGT(%i);\n", label);
 	fprintf(fp, "L %i:\n", label+1);
-	//inFor = 0; 
+	fprintf(fp, "\tR7=R7+4;\n");
 	if (inFunc) removeScope(funcStack);
 	else removeScope(stack);
 	resetRegs();
@@ -2607,6 +2624,7 @@ int accessListQ(char* varName, int reg){
 			advanceFloatRegister();
 			int aux1 = reg + 1;
 			if (aux1 == 5) aux1 = 0;
+			fprintf(fp, "\tR7=R7-8;\n");
 			if (inFunc){
 				funcOffset += 4;
 				fprintf(fp, "\tI(R6-%i)=R%i;\n", funcOffset, aux1);			
@@ -2646,6 +2664,7 @@ int accessListQ(char* varName, int reg){
 				fprintf(fp, "\tR%i=I(R6-%i);\n", aux1, localOffset);
 				localOffset -= 4;
 			}
+			fprintf(fp, "\tR7=R7+8;\n");
 			
 			
 			if (spillMode) reduceRegister();
@@ -2666,7 +2685,8 @@ int initFunctionQ(char* funcName){
 		int funcLabel = nextLabel;
 		nextLabel++;
 		fprintf(fp, "\tGT(%i);\n", nextLabel);
-		fprintf(fp, "L %i:\n", funcLabel);
+		fprintf(fp, "L %i:\n", funcLabel);		
+		fprintf(fp, "\tR7=R7-4;\n");
 		funcOffset += 4;
 		nextLabel++;
 		return funcLabel;
@@ -2680,6 +2700,7 @@ void initFuncParamQ(char* varName){
 		s.name = varName;
 		s.type = 1;
 		s.scope = currentScope;
+		fprintf(fp, "\tR7=R7-4;\n");
 		funcOffset += 4;
 		s.memDir = funcOffset;
 		funcParams++;
@@ -2693,6 +2714,7 @@ void symbolFunctionQ(char* funcName, int funcLabel){
 	s.memDir = funcLabel;
 	s.size = funcParams;
 	s.type = 4;
+	fprintf(fp, "\tR7=R7-4;\n");
 	localOffset += 4;
 	s.returnDir = localOffset;
 	push(stack, s);
@@ -2700,15 +2722,19 @@ void symbolFunctionQ(char* funcName, int funcLabel){
 
 void endFunctionQ(char* funcName, int funcLabel){
 	inFunc = 0;
-	funcParams = 0;
+	funcParams = 0;	
 	funcOffset = 0;
 	if (returnCounter == 0) updateFunctionReturnDir(funcName); 
 	fprintf(fp, "\tR0=I(R6-4);\n");
+	fprintf(fp, "\tR7=R7+%i;\n", funcOffset);
 	fprintf(fp, "\tGT(R0);\n");
 	fprintf(fp, "L %i:\n", funcLabel + 1);
 }
 
-void saveRegs(){
+void saveRegs(int size){
+	size = size * 4 + 4;
+	fprintf(fp, "\tR7=R7-%i;\n", size);		
+	fprintf(fp, "\tR7=R7-36;\n");
 	if (inFunc) {
 		fprintf(fp, "\tI(R6-%i)=R0;\n", funcOffset += 4);
 		fprintf(fp, "\tI(R6-%i)=R1;\n", funcOffset += 4);
@@ -2732,7 +2758,7 @@ void saveRegs(){
 	}
 }
 
-void loadRegs(){
+void loadRegs(int size){
 	if (inFunc) {
 		fprintf(fp, "\tRR3=F(R6-%i);\n", funcOffset);
 		fprintf(fp, "\tRR2=F(R6-%i);\n", funcOffset -= 4);
@@ -2755,7 +2781,10 @@ void loadRegs(){
 		fprintf(fp, "\tR1=I(R6-%i);\n", localOffset -= 4);
 		fprintf(fp, "\tR0=I(R6-%i);\n", localOffset -= 4);
 		localOffset -= 4;
-	}	
+	}
+	size = size * 4 + 4;
+	fprintf(fp, "\tR7=R7+%i;\n", size);
+	fprintf(fp, "\tR7=R7+36;\n");
 }
 
 int callFunctionQ(char* funcName){
@@ -2764,25 +2793,28 @@ int callFunctionQ(char* funcName){
 	if (!varIsFunc(f.type)) yyerror("No se puede llamar a una variable que no sea función.");
 	else {
 		
-		saveRegs();					
-		/*if (inFunc) fprintf(fp, "\tR6=R6-%i;\n", funcOffset);
-		else fprintf(fp, "\tR6=R6-%i;\n", localOffset);*/
+		saveRegs(f.size);
 		return f.memDir;
 	}
 }
 
 void leaveFunctionQ(int label, char* funcName){
 	int size = getSymbol(funcName).size;
-	//printf("%i\n", funcAssignedParams);
 	if (funcAssignedParams != size) yyerror("El número de parámetros no coincide con el de la función.");
+	//fprintf(fp, "\tR7=R7-4;\n");
 	if (inFunc) fprintf(fp, "\tR6=R6-%i;\n", funcOffset);
 	else fprintf(fp, "\tR6=R6-%i;\n", localOffset);
 	fprintf(fp, "\tI(R6-4)=%i;\n", nextLabel);
 	fprintf(fp, "\tGT(%i);\n", label);
 	fprintf(fp, "L %i:\n", nextLabel++);
-	if (inFunc) fprintf(fp, "\tR6=R6+%i;\n", funcOffset);	
-	else fprintf(fp, "\tR6=R6+%i;\n", localOffset);
-	loadRegs();
+	if (inFunc) {
+		fprintf(fp, "\tR6=R6+%i;\n", funcOffset);
+	}	
+	else {
+		fprintf(fp, "\tR6=R6+%i;\n", localOffset);
+	}
+	
+	loadRegs(size);
 	funcAssignedParams = 0;
 }
 
@@ -2800,6 +2832,7 @@ void assignParamQ(int reg){
 	} else {
 		if (inFunc) fprintf(fp, "\tR6=R6-%i;\n", funcOffset);
 		else fprintf(fp, "\tR6=R6-%i;\n", localOffset);
+		//fprintf(fp, "\tR7=R7-4;\n");
 		funcAssignedParams++;
 		int mem = 4 + funcAssignedParams*4;
 		fprintf(fp, "\tF(R6-%i)=R%i;\n", mem, reg);
@@ -2840,9 +2873,9 @@ void returnClauseQ(int reg){
 		int returnDir = s.returnDir;
 		if (reg > 9){
 			reg -= 10;
-			fprintf(fp, "\tF(R7-4)=RR%i;\n", reg);	
+			fprintf(fp, "\tF(R5)=RR%i;\n", reg);	
 		} else {
-			fprintf(fp, "\tF(R7-4)=R%i;\n", reg);
+			fprintf(fp, "\tF(R5)=R%i;\n", reg);
 		}
 		fprintf(fp, "\tR0=I(R6-4);\n");
 		fprintf(fp, "\tGT(R0);\n");		
@@ -2860,7 +2893,7 @@ int returnFunctionQ(char* varName){
 	struct symbol f = getSymbol(varName);
 	advanceFloatRegister();
 	if (f.returnDir == -1);
-	else fprintf(fp, "\tRR%i=F(R7-4);\n", currentFloatReg);
+	else fprintf(fp, "\tRR%i=F(R5);\n", currentFloatReg);
 	if (spillMode) reduceRegister();
 	else currentReg--;
 	return currentFloatReg+10;
@@ -2955,6 +2988,7 @@ void removeScope(struct Stack* stack){
 		stack->top--;
 		if (inFunc) funcOffset -= 4;
 		else localOffset -= 4;
+		fprintf(fp, "\tR7=R7+4;\n");
 	}
 	currentScope--;
 } 
