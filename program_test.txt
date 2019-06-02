@@ -6,9 +6,10 @@ show a
 show a plus b
 show a minus b
 show a times b
-show a divided by b plus cx
+show a divided by b plus c
 if a > b then
-	show "a is greater than b"
+	show 2
+	show "a es mayor que b"
 	show "Hola"
 	done
 if a < b then
@@ -19,12 +20,13 @@ done
 if a not is b then
    	show "a is not equals to b"
 	done
-if a is b and a not is c then show "TEST" done
+if a not is c then show "TEST" done
 if a not <= b then
    	show "a is not lower or equals to b"
 	done
 from 0 to 4 do
-   	show "Iteration number " + iter
+	Num asdf is 4
+   	show iter
 	done
 Text greet is "Hello world."
 show greet
@@ -32,10 +34,17 @@ List Num l is 2, 3, 4, 5
 foreach number in l do
    	show number
 	done
+#show number
 from 0 to 3 do
-   	show l[number]
+   	show l[iter]
 	done
 
-func mean ( a, b )
- 	return a plus b divided by 2
+func mean (a , b)
+ 	return (a plus b) divided by 2
 endfunc
+
+show mean(3, 6)
+
+
+
+

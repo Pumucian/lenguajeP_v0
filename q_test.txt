@@ -1,3 +1,7 @@
+func dameundos(a)
+	return 2
+endfunc
+
 func funcion (a)
 	Num b = 3.2
 	List Num lista is 2, 1, 4, 2.5
@@ -5,22 +9,26 @@ func funcion (a)
 	Text s2 = "Adios mundo"
 	show s
 	b is (1 + 4) * (5 + (2 + (2 + (2 + (2 + (2 + (2 + (2 + (2 + (4 * 3))))))))) + 6) * (7 + 8) * (9 + 10) * (11 + 12)
-	Num c is (1. + 4.) * (5 + (2 + (2. + (2 + (lista[0] + (2 + (2. + (a + (2. + (4 * 3.))))))))) + 6.) * (7 + 8.) * (9 + 10.) * (11. + 12)
+	Num c is (1. + 4.) * (5 + (2 + (2. + (2 + (dameundos(213) + (2 + (lista[0] + (a + (2. + (4 * 3.))))))))) + 6.) * (7 + 8.) * (9 + 10.) * (11. + 12)
 	if a is 3 + 2 * 4 then show "if correcto" done
 	from 4 to 6 do show iter done
 	show b
 	show c
-	show lista[a] + 2
+	show 2 + lista[1] + 2
 	show (1 + 4) * (5 + (2 + (2 + (2 + (2 + (2 + (2 + (2 + (2 + (4 * 3))))))))) + 6) * (7 + 8) * (9 + 10) * (11 + 12)
 	foreach number in lista do show "bucle" show number done
 	s is s2
+	lista[1] = 4.3
+	show lista[1]
 	show s
 endfunc
-func recur (a)
-	show a
-	if a > 0 then recur(a - 1) done
-	show a
+
+func factorial(a)
+	if a is 1 then return a done
+	return factorial(a - 1) * a
 endfunc
 
 funcion (2)
-recur(3)
+show factorial(4)
+
+

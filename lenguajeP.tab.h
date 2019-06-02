@@ -92,7 +92,7 @@ extern int yydebug;
 
 union YYSTYPE
 {
-#line 120 "lenguajeP.y" /* yacc.c:1909  */
+#line 122 "lenguajeP.y" /* yacc.c:1909  */
 int entero; float real; char* string;
 
 #line 99 "lenguajeP.tab.h" /* yacc.c:1909  */
