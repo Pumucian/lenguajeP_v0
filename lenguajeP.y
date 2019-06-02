@@ -5,7 +5,7 @@
 	#include <limits.h> 
 
 	// ASIGNACIONES A POSICIONES DE LISTA
-	// !!!!!!!!!!!!!!!!!!!!!!!!RECURSIVIDAD Y RETURNS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!!!!!!!!!!!!!!!!!!!!!!!RETURNS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	// stuff from flex that bison needs to know about:
 	extern int yylex();
@@ -144,7 +144,7 @@
 %%
 
 lenguajeP:
-	lenguajeP line {fprintf(fp, "/////////////Scope: %i\n", localOffset);}
+	lenguajeP line //{fprintf(fp, "/////////////Scope: %i\n", localOffset);}
 	|;
 
 line:
@@ -264,10 +264,10 @@ void advanceRegister(){
 		spillMode = 1;
 		if (inFunc) {
 			funcOffset += 4;
-			if (spilled[0] != 0) fprintf(fp, "\tI(R6-%i)=R0;\n", funcOffset);
+			if (spilled[0] != 0) fprintf(fp, "\tI(R7-%i)=R0;\n", funcOffset);
 		} else {			
 			localOffset += 4;
-			if (spilled[0] != 0) fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset);
+			if (spilled[0] != 0) fprintf(fp, "\tI(R7-%i)=R0;\n", localOffset);
 		}
 	}
 	else {
@@ -277,10 +277,10 @@ void advanceRegister(){
 				spillRegs++;
 				if (inFunc) {
 					funcOffset += 4;
-					fprintf(fp, "\tI(R6-%i)=R%i;\n", funcOffset, currentReg);
+					fprintf(fp, "\tI(R7-%i)=R%i;\n", funcOffset, currentReg);
 				} else {					
 					localOffset += 4;
-					fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, currentReg);
+					fprintf(fp, "\tI(R7-%i)=R%i;\n", localOffset, currentReg);
 				}
 			}
 			spilled[currentReg] = 1;	
@@ -305,10 +305,10 @@ void advanceFloatRegister(){
 		floatSpillMode = 1;
 		if (inFunc){
 			funcOffset += 4;
-			if (floatSpilled[0] != 0) fprintf(fp, "\tF(R6-%i)=RR0;\n", funcOffset);
+			if (floatSpilled[0] != 0) fprintf(fp, "\tF(R7-%i)=RR0;\n", funcOffset);
 		} else {
 			localOffset += 4;
-			if (floatSpilled[0] != 0) fprintf(fp, "\tF(R6-%i)=RR0;\n", localOffset);
+			if (floatSpilled[0] != 0) fprintf(fp, "\tF(R7-%i)=RR0;\n", localOffset);
 		}
 	}
 	else {
@@ -318,10 +318,10 @@ void advanceFloatRegister(){
 				floatSpillRegs++;
 				if (inFunc) {
 					funcOffset += 4;
-					fprintf(fp, "\tF(R6-%i)=RR%i;\n", funcOffset, currentFloatReg);
+					fprintf(fp, "\tF(R7-%i)=RR%i;\n", funcOffset, currentFloatReg);
 				} else {
 					localOffset += 4;
-					fprintf(fp, "\tF(R6-%i)=RR%i;\n", localOffset, currentFloatReg);
+					fprintf(fp, "\tF(R7-%i)=RR%i;\n", localOffset, currentFloatReg);
 				}
 			}
 			floatSpilled[currentFloatReg] = 1;	
@@ -368,10 +368,10 @@ void floatSpill(int r1, int r2){
 		if (lastFloatRegSpilled == -1) lastFloatRegSpilled = r2;
 		else if (r1 == lastFloatRegSpilled){
 			if (inFunc){
-				fprintf(fp, "\tRR%i=F(R6-%i);\n", r1, funcOffset);
+				fprintf(fp, "\tRR%i=F(R7-%i);\n", r1, funcOffset);
 				funcOffset -= 4;
 			} else {
-				fprintf(fp, "\tRR%i=F(R6-%i);\n", r1, localOffset);
+				fprintf(fp, "\tRR%i=F(R7-%i);\n", r1, localOffset);
 				localOffset -= 4;
 			}						
 			if (floatSpillRegs > 0) {floatSpillRegs--; reduceLastFloatRegSpilled();}
@@ -389,10 +389,10 @@ void intSpill(int r1, int r2){
 		if (lastRegSpilled == -1) lastRegSpilled = r2;
 		else if (r1 == lastRegSpilled){
 			if (inFunc){
-				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, funcOffset);
+				fprintf(fp, "\tR%i=I(R7-%i);\n", r1, funcOffset);
 				funcOffset -= 4;
 			} else {
-				fprintf(fp, "\tR%i=I(R6-%i);\n", r1, localOffset);
+				fprintf(fp, "\tR%i=I(R7-%i);\n", r1, localOffset);
 				localOffset -= 4;
 			}						
 			if (spillRegs > 0) {spillRegs--; reduceLastRegSpilled();}
@@ -439,7 +439,6 @@ void initQFile(){
 	fprintf(fp, "\tSTR(%i, \"\");\n", memoryDir -= 4);
 	emptyStringDir = memoryDir;
 	fprintf(fp, "CODE(0)\n");
-	fprintf(fp, "\tR6=R7;\n");
 }
 
 void resetRegs(){
@@ -466,7 +465,7 @@ void initNumVarQ(char* varName, int reg){
 			funcOffset += 4;
 			s.memDir = funcOffset;
 			s.scope = currentScope;
-			fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg);
+			fprintf(fp, "\tF(R7-%i)=RR%i;\n", s.memDir, reg);
 			push(funcStack, s);
 			resetRegs();
 		} else {
@@ -475,7 +474,7 @@ void initNumVarQ(char* varName, int reg){
 			funcOffset += 4;
 			s.memDir = funcOffset;
 			s.scope = currentScope;
-			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			fprintf(fp, "\tI(R7-%i)=R%i;\n", s.memDir, reg);
 			push(funcStack, s);
 			resetRegs();
 		}
@@ -490,7 +489,7 @@ void initNumVarQ(char* varName, int reg){
 			localOffset += 4;
 			s.memDir = localOffset;
 			s.scope = currentScope;
-			fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg);
+			fprintf(fp, "\tF(R7-%i)=RR%i;\n", s.memDir, reg);
 			push(stack, s);
 			resetRegs();
 		} else {
@@ -499,7 +498,7 @@ void initNumVarQ(char* varName, int reg){
 			localOffset += 4;
 			s.memDir = localOffset;
 			s.scope = currentScope;
-			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			fprintf(fp, "\tI(R7-%i)=R%i;\n", s.memDir, reg);
 			push(stack, s);
 			resetRegs();
 		}
@@ -527,7 +526,7 @@ void initTextVarQ(char* varName, int reg){
 			funcOffset += 4;
 			s.memDir = funcOffset;
 			s.scope = currentScope;
-			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			fprintf(fp, "\tI(R7-%i)=R%i;\n", s.memDir, reg);
 			push(funcStack, s);
 			resetRegs();
 		}
@@ -542,7 +541,7 @@ void initTextVarQ(char* varName, int reg){
 			localOffset += 4;
 			s.memDir = localOffset;
 			s.scope = currentScope;
-			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			fprintf(fp, "\tI(R7-%i)=R%i;\n", s.memDir, reg);
 			push(stack, s);
 			resetRegs();
 		}
@@ -554,14 +553,14 @@ void initListPositionQ(int reg){
 	else {
 		listPosition += 1;
 		if (inFunc) {
-			if (reg > 9) fprintf(fp, "\tF(R6-%i)=RR%i;\n", funcOffset + listPosition*4, reg-10);
+			if (reg > 9) fprintf(fp, "\tF(R7-%i)=RR%i;\n", funcOffset + listPosition*4, reg-10);
 			else {
-				fprintf(fp, "\tF(R6-%i)=R%i;\n", funcOffset + listPosition*4, reg);
+				fprintf(fp, "\tF(R7-%i)=R%i;\n", funcOffset + listPosition*4, reg);
 			}
 		} else {
-			if (reg > 9) fprintf(fp, "\tF(R6-%i)=RR%i;\n", localOffset + listPosition*4, reg-10);
+			if (reg > 9) fprintf(fp, "\tF(R7-%i)=RR%i;\n", localOffset + listPosition*4, reg-10);
 			else {
-				fprintf(fp, "\tF(R6-%i)=R%i;\n", localOffset + listPosition*4, reg);
+				fprintf(fp, "\tF(R7-%i)=R%i;\n", localOffset + listPosition*4, reg);
 			}
 		}
 		
@@ -584,17 +583,17 @@ int getVarnameRegQ(char* varName){
 		if (isNotVar(s.type)) yyerror("La variable no existe.");
 		else if (varIsInt(s.type)){
 			advanceRegister();
-			fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
+			fprintf(fp, "\tR%i=I(R7-%i);\n", currentReg, s.memDir);
 			int reg = currentReg;
 			return reg;
 		} else if (varIsFloat(s.type)){
 			advanceFloatRegister();
-			fprintf(fp, "\tRR%i=F(R6-%i);\n", currentFloatReg, s.memDir);
+			fprintf(fp, "\tRR%i=F(R7-%i);\n", currentFloatReg, s.memDir);
 			int reg = currentFloatReg + 10;
 			return reg;
 		} else if (varIsString(s.type)){
 			advanceRegister();
-			fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
+			fprintf(fp, "\tR%i=I(R7-%i);\n", currentReg, s.memDir);
 			int reg = currentReg - 10;
 			return reg;
 		} else if (varIsList(s.type)){
@@ -606,17 +605,17 @@ int getVarnameRegQ(char* varName){
 		if (isNotVar(s.type)) yyerror("La variable no existe.");
 		else if (varIsInt(s.type)){
 			advanceRegister();
-			fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
+			fprintf(fp, "\tR%i=I(R7-%i);\n", currentReg, s.memDir);
 			int reg = currentReg;
 			return reg;
 		} else if (varIsFloat(s.type)){
 			advanceFloatRegister();
-			fprintf(fp, "\tRR%i=F(R6-%i);\n", currentFloatReg, s.memDir);
+			fprintf(fp, "\tRR%i=F(R7-%i);\n", currentFloatReg, s.memDir);
 			int reg = currentFloatReg + 10;
 			return reg;
 		} else if (varIsString(s.type)){
 			advanceRegister();
-			fprintf(fp, "\tR%i=I(R6-%i);\n", currentReg, s.memDir);
+			fprintf(fp, "\tR%i=I(R7-%i);\n", currentReg, s.memDir);
 			int reg = currentReg - 10;
 			return reg;
 		} else if (varIsList(s.type)){
@@ -674,7 +673,7 @@ void initFromQ(int r1, int r2){
 			s.memDir = funcOffset;
 			funcOffset += 4;
 			t.memDir = funcOffset;		 
-			fprintf(fp, "\tI(R6-%i)=R%i;\n\tI(R6-%i)=R%i;\nL %i:\n", s.memDir, r1, t.memDir, r2, nextLabel); //init variables iter y final (limites locales) 
+			fprintf(fp, "\tI(R7-%i)=R%i;\n\tI(R7-%i)=R%i;\nL %i:\n", s.memDir, r1, t.memDir, r2, nextLabel); //init variables iter y final (limites locales) 
 			s.scope = currentScope;
 			t.scope = currentScope; 
 			push(funcStack, s);
@@ -684,13 +683,13 @@ void initFromQ(int r1, int r2){
 			s.memDir = localOffset;
 			localOffset += 4;
 			t.memDir = localOffset;		 
-			fprintf(fp, "\tI(R6-%i)=R%i;\n\tI(R6-%i)=R%i;\nL %i:\n", s.memDir, r1, t.memDir, r2, nextLabel); //init variables iter y final (limites locales) 
+			fprintf(fp, "\tI(R7-%i)=R%i;\n\tI(R7-%i)=R%i;\nL %i:\n", s.memDir, r1, t.memDir, r2, nextLabel); //init variables iter y final (limites locales) 
 			s.scope = currentScope;
 			t.scope = currentScope; 
 			push(stack, s);
 			push(stack, t);
 		}
-		fprintf(fp, "\tR0=I(R6-%i);\n\tR1=I(R6-%i);\n\tIF(R0>R1) GT(%i);\n", s.memDir, t.memDir, nextLabel+1); //cargo y comparo				
+		fprintf(fp, "\tR0=I(R7-%i);\n\tR1=I(R7-%i);\n\tIF(R0>R1) GT(%i);\n", s.memDir, t.memDir, nextLabel+1); //cargo y comparo				
 		nextLabel += 2;
 	}	
 }
@@ -699,9 +698,9 @@ void endFromQ(int label){
 	int memDir;
 	if (inFunc) memDir = getFuncSymbol("iter").memDir;
 	else memDir = getSymbol("iter").memDir;
-	fprintf(fp, "\tR0=I(R6-%i);\n", memDir);
+	fprintf(fp, "\tR0=I(R7-%i);\n", memDir);
 	fprintf(fp, "\tR0=R0+1;\n");
-	fprintf(fp, "\tI(R6-%i)=R0;\n", memDir);
+	fprintf(fp, "\tI(R7-%i)=R0;\n", memDir);
 	fprintf(fp, "\tGT(%i);\n", label);
 	fprintf(fp, "L %i:\n", label+1);
 	inFor = 0; 
@@ -722,23 +721,23 @@ void initForeachQ(char* varName, int cod){
 			funcOffset += 4;
 			l.memDir = funcOffset;
 			l.scope = currentScope;
-			fprintf(fp, "\tR0=R6-R0;\n\tI(R6-%i)=R0;\n", l.memDir); //en R0 está la offset base del array
+			fprintf(fp, "\tR0=R7-R0;\n\tI(R7-%i)=R0;\n", l.memDir); //en R0 está la offset base del array
 
 			funcOffset += 4;
 			i.memDir = funcOffset;
 			i.name = "foreach";
-			fprintf(fp, "\tI(R6-%i)=0;\nL %i:\n", i.memDir, nextLabel);
+			fprintf(fp, "\tI(R7-%i)=0;\nL %i:\n", i.memDir, nextLabel);
 			i.scope = currentScope;
 			push(funcStack, i);
 
-			fprintf(fp, "\tR0=I(R6-%i);\n\tR1=%i;\n\tIF(R0>=R1) GT(%i);\n", i.memDir, size, nextLabel+1);
+			fprintf(fp, "\tR0=I(R7-%i);\n\tR1=%i;\n\tIF(R0>=R1) GT(%i);\n", i.memDir, size, nextLabel+1);
 			s.name = varName;
 			s.type = 1;
 			s.scope = currentScope;
 			funcOffset += 4;
 			s.memDir = funcOffset;
-			fprintf(fp, "\tR0=I(R6-%i);\n\tR0=R0+1;\n\tR0=R0*4;\n", i.memDir); //cojo el índice + 1 para acceder al array en memoria
-			fprintf(fp, "\tR1=I(R6-%i);\n\tR0=R1-R0;\n\tRR0=F(R0);\n\tF(R6-%i)=RR0;\n", l.memDir, s.memDir); //recupero la posición base y le resto el offset del array para recuperar el valor de la posición correspondiente
+			fprintf(fp, "\tR0=I(R7-%i);\n\tR0=R0+1;\n\tR0=R0*4;\n", i.memDir); //cojo el índice + 1 para acceder al array en memoria
+			fprintf(fp, "\tR1=I(R7-%i);\n\tR0=R1-R0;\n\tRR0=F(R0);\n\tF(R7-%i)=RR0;\n", l.memDir, s.memDir); //recupero la posición base y le resto el offset del array para recuperar el valor de la posición correspondiente
 			push(funcStack, s);
 			nextLabel += 2;
 
@@ -746,23 +745,23 @@ void initForeachQ(char* varName, int cod){
 			localOffset += 4;
 			l.memDir = localOffset;
 			l.scope = currentScope;
-			fprintf(fp, "\tR0=R6-R0;\n\tI(R6-%i)=R0;\n", l.memDir); //en R0 está la offset base del array
+			fprintf(fp, "\tR0=R7-R0;\n\tI(R7-%i)=R0;\n", l.memDir); //en R0 está la offset base del array
 
 			localOffset += 4;
 			i.memDir = localOffset;
 			i.name = "foreach";
-			fprintf(fp, "\tI(R6-%i)=0;\nL %i:\n", i.memDir, nextLabel);
+			fprintf(fp, "\tI(R7-%i)=0;\nL %i:\n", i.memDir, nextLabel);
 			i.scope = currentScope;
 			push(stack, i);
 
-			fprintf(fp, "\tR0=I(R6-%i);\n\tR1=%i;\n\tIF(R0>=R1) GT(%i);\n", i.memDir, size, nextLabel+1);
+			fprintf(fp, "\tR0=I(R7-%i);\n\tR1=%i;\n\tIF(R0>=R1) GT(%i);\n", i.memDir, size, nextLabel+1);
 			s.name = varName;
 			s.type = 1;
 			s.scope = currentScope;
 			localOffset += 4;
 			s.memDir = localOffset;
-			fprintf(fp, "\tR0=I(R6-%i);\n\tR0=R0+1;\n\tR0=R0*4;\n", i.memDir); //cojo el índice + 1 para acceder al array en memoria
-			fprintf(fp, "\tR1=I(R6-%i);\n\tR0=R1-R0;\n\tRR0=F(R0);\n\tF(R6-%i)=RR0;\n", l.memDir, s.memDir); //recupero la posición base y le resto el offset del array para recuperar el valor de la posición correspondiente
+			fprintf(fp, "\tR0=I(R7-%i);\n\tR0=R0+1;\n\tR0=R0*4;\n", i.memDir); //cojo el índice + 1 para acceder al array en memoria
+			fprintf(fp, "\tR1=I(R7-%i);\n\tR0=R1-R0;\n\tRR0=F(R0);\n\tF(R7-%i)=RR0;\n", l.memDir, s.memDir); //recupero la posición base y le resto el offset del array para recuperar el valor de la posición correspondiente
 			push(stack, s);
 			nextLabel += 2;
 		}
@@ -773,9 +772,9 @@ void endForeachQ(int label){
 	int memDir; 
 	if (inFunc) memDir = getFuncSymbol("foreach").memDir;
 	else memDir = getSymbol("foreach").memDir;	
-	fprintf(fp, "\tR0=I(R6-%i);\n", memDir);
+	fprintf(fp, "\tR0=I(R7-%i);\n", memDir);
 	fprintf(fp, "\tR0=R0+1;\n");
-	fprintf(fp, "\tI(R6-%i)=R0;\n", memDir);
+	fprintf(fp, "\tI(R7-%i)=R0;\n", memDir);
 	fprintf(fp, "\tGT(%i);\n", label);
 	fprintf(fp, "L %i:\n", label+1);
 	//inFor = 0; 
@@ -811,17 +810,17 @@ void assignRegToVar(char* varName, int reg){
 		if (reg > 100 || reg < -9) yyerror("Los tipos son incompatibles.");
 		else if (reg > 9) {
 			changeSymbolType(varName, 1);
-			fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg-10);
-		} else fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
+			fprintf(fp, "\tF(R7-%i)=RR%i;\n", s.memDir, reg-10);
+		} else fprintf(fp, "\tI(R7-%i)=R%i;\n", s.memDir, reg);
 	} else if (varIsFloat(s.type)){
 		if (reg > 100 || reg < -9) yyerror("Los tipos son incompatibles.");
 		else if (reg < 9) {
 			changeSymbolType(varName, 0);
-			fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg);
-		} else fprintf(fp, "\tF(R6-%i)=RR%i;\n", s.memDir, reg-10);
+			fprintf(fp, "\tI(R7-%i)=R%i;\n", s.memDir, reg);
+		} else fprintf(fp, "\tF(R7-%i)=RR%i;\n", s.memDir, reg-10);
 	} else if (varIsString(s.type)){
 		if (reg > -1) yyerror("Los tipos son incompatibles.");
-		fprintf(fp, "\tI(R6-%i)=R%i;\n", s.memDir, reg+10);
+		fprintf(fp, "\tI(R7-%i)=R%i;\n", s.memDir, reg+10);
 	} else if (varIsList(s.type)) yyerror("No se puede asignar una lista. Pruebe a asignar elementos.");
 }
 
@@ -838,11 +837,11 @@ int accessListQ(char* varName, int reg){
 			if (aux1 == 5) aux1 = 0;
 			if (inFunc){
 				funcOffset += 4;
-				fprintf(fp, "\tI(R6-%i)=R%i;\n", funcOffset, aux1);			
+				fprintf(fp, "\tI(R7-%i)=R%i;\n", funcOffset, aux1);			
 				int aux2 = aux1 + 1;
 				if (aux2 == 5) aux2 = 0;
 				funcOffset += 4;
-				fprintf(fp, "\tI(R6-%i)=R%i;\n", funcOffset, aux2);
+				fprintf(fp, "\tI(R7-%i)=R%i;\n", funcOffset, aux2);
 				fprintf(fp, "\tR%i=%i;\n", aux1, l.size);
 				fprintf(fp, "\tR%i=R%i;\n", aux2, reg);
 				fprintf(fp, "\tIF(R%i<0) GT(-2);\n", aux2);
@@ -850,18 +849,18 @@ int accessListQ(char* varName, int reg){
 				fprintf(fp, "\tR%i=4*R%i;\n", aux1, aux2);
 				fprintf(fp, "\tR%i=R%i+4;\n", aux1, aux1);
 				fprintf(fp, "\tR%i=%i+R%i;\n", aux1, l.memDir, aux1);
-				fprintf(fp, "\tRR%i=F(R6-R%i);\n", currentFloatReg, aux1);
-				fprintf(fp, "\tR%i=I(R6-%i);\n", aux2, funcOffset);
+				fprintf(fp, "\tRR%i=F(R7-R%i);\n", currentFloatReg, aux1);
+				fprintf(fp, "\tR%i=I(R7-%i);\n", aux2, funcOffset);
 				funcOffset -= 4;
-				fprintf(fp, "\tR%i=I(R6-%i);\n", aux1, funcOffset);
+				fprintf(fp, "\tR%i=I(R7-%i);\n", aux1, funcOffset);
 				funcOffset -= 4;
 			} else {
 				localOffset += 4;
-				fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, aux1);			
+				fprintf(fp, "\tI(R7-%i)=R%i;\n", localOffset, aux1);			
 				int aux2 = aux1 + 1;
 				if (aux2 == 5) aux2 = 0;
 				localOffset += 4;
-				fprintf(fp, "\tI(R6-%i)=R%i;\n", localOffset, aux2);
+				fprintf(fp, "\tI(R7-%i)=R%i;\n", localOffset, aux2);
 				fprintf(fp, "\tR%i=%i;\n", aux1, l.size);
 				fprintf(fp, "\tR%i=R%i;\n", aux2, reg);
 				fprintf(fp, "\tIF(R%i<0) GT(-2);\n", aux2);
@@ -869,10 +868,10 @@ int accessListQ(char* varName, int reg){
 				fprintf(fp, "\tR%i=4*R%i;\n", aux1, aux2);
 				fprintf(fp, "\tR%i=R%i+4;\n", aux1, aux1);
 				fprintf(fp, "\tR%i=%i+R%i;\n", aux1, l.memDir, aux1);
-				fprintf(fp, "\tRR%i=F(R6-R%i);\n", currentFloatReg, aux1);
-				fprintf(fp, "\tR%i=I(R6-%i);\n", aux2, localOffset);
+				fprintf(fp, "\tRR%i=F(R7-R%i);\n", currentFloatReg, aux1);
+				fprintf(fp, "\tR%i=I(R7-%i);\n", aux2, localOffset);
 				localOffset -= 4;
-				fprintf(fp, "\tR%i=I(R6-%i);\n", aux1, localOffset);
+				fprintf(fp, "\tR%i=I(R7-%i);\n", aux1, localOffset);
 				localOffset -= 4;
 			}
 			
@@ -928,58 +927,60 @@ void endFunctionQ(int funcLabel){
 	inFunc = 0;
 	funcParams = 0;
 	funcOffset = 0;
-	fprintf(fp, "\tR0=I(R6-4);\n");
+	fprintf(fp, "\tR0=I(R7-4);\n");
 	fprintf(fp, "\tGT(R0);\n");
 	fprintf(fp, "L %i:\n", funcLabel + 1);
 }
 
 void saveRegs(){
 	if (inFunc) {
-		funcOffset += 4;
-		fprintf(fp, "\tI(R6-%i)=R0;\n", funcOffset += 4);
-		fprintf(fp, "\tI(R6-%i)=R1;\n", funcOffset += 4);
-		fprintf(fp, "\tI(R6-%i)=R2;\n", funcOffset += 4);
-		fprintf(fp, "\tI(R6-%i)=R3;\n", funcOffset += 4);
-		fprintf(fp, "\tI(R6-%i)=R4;\n", funcOffset += 4);
-		fprintf(fp, "\tF(R6-%i)=RR0;\n", funcOffset += 4);
-		fprintf(fp, "\tF(R6-%i)=RR1;\n", funcOffset += 4);
-		fprintf(fp, "\tF(R6-%i)=RR2;\n", funcOffset += 4);
-		fprintf(fp, "\tF(R6-%i)=RR3;\n", funcOffset);
+		//funcOffset += 4;
+		fprintf(fp, "\tI(R7-%i)=R0;\n", funcOffset += 4);
+		fprintf(fp, "\tI(R7-%i)=R1;\n", funcOffset += 4);
+		fprintf(fp, "\tI(R7-%i)=R2;\n", funcOffset += 4);
+		fprintf(fp, "\tI(R7-%i)=R3;\n", funcOffset += 4);
+		fprintf(fp, "\tI(R7-%i)=R4;\n", funcOffset += 4);
+		fprintf(fp, "\tF(R7-%i)=RR0;\n", funcOffset += 4);
+		fprintf(fp, "\tF(R7-%i)=RR1;\n", funcOffset += 4);
+		fprintf(fp, "\tF(R7-%i)=RR2;\n", funcOffset += 4);
+		fprintf(fp, "\tF(R7-%i)=RR3;\n", funcOffset += 4);
 	} else {
-		localOffset += 4;
-		fprintf(fp, "\tI(R6-%i)=R0;\n", localOffset += 4);
-		fprintf(fp, "\tI(R6-%i)=R1;\n", localOffset += 4);
-		fprintf(fp, "\tI(R6-%i)=R2;\n", localOffset += 4);
-		fprintf(fp, "\tI(R6-%i)=R3;\n", localOffset += 4);
-		fprintf(fp, "\tI(R6-%i)=R4;\n", localOffset += 4);
-		fprintf(fp, "\tF(R6-%i)=RR0;\n", localOffset += 4);
-		fprintf(fp, "\tF(R6-%i)=RR1;\n", localOffset += 4);
-		fprintf(fp, "\tF(R6-%i)=RR2;\n", localOffset += 4);
-		fprintf(fp, "\tF(R6-%i)=RR3;\n", localOffset);
+		//localOffset += 4;
+		fprintf(fp, "\tI(R7-%i)=R0;\n", localOffset += 4);
+		fprintf(fp, "\tI(R7-%i)=R1;\n", localOffset += 4);
+		fprintf(fp, "\tI(R7-%i)=R2;\n", localOffset += 4);
+		fprintf(fp, "\tI(R7-%i)=R3;\n", localOffset += 4);
+		fprintf(fp, "\tI(R7-%i)=R4;\n", localOffset += 4);
+		fprintf(fp, "\tF(R7-%i)=RR0;\n", localOffset += 4);
+		fprintf(fp, "\tF(R7-%i)=RR1;\n", localOffset += 4);
+		fprintf(fp, "\tF(R7-%i)=RR2;\n", localOffset += 4);
+		fprintf(fp, "\tF(R7-%i)=RR3;\n", localOffset += 4);
 	}
 }
 
 void loadRegs(){
 	if (inFunc) {
-		fprintf(fp, "\tRR3=F(R6-%i);\n", funcOffset -= 4);
-		fprintf(fp, "\tRR2=F(R6-%i);\n", funcOffset -= 4);
-		fprintf(fp, "\tRR1=F(R6-%i);\n", funcOffset -= 4);
-		fprintf(fp, "\tRR0=F(R6-%i);\n", funcOffset -= 4);
-		fprintf(fp, "\tR4=I(R6-%i);\n", funcOffset -= 4);
-		fprintf(fp, "\tR3=I(R6-%i);\n", funcOffset -= 4);
-		fprintf(fp, "\tR2=I(R6-%i);\n", funcOffset -= 4);
-		fprintf(fp, "\tR1=I(R6-%i);\n", funcOffset -= 4);
-		fprintf(fp, "\tR0=I(R6-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tRR3=F(R7-%i);\n", funcOffset);
+		fprintf(fp, "\tRR2=F(R7-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tRR1=F(R7-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tRR0=F(R7-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR4=I(R7-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR3=I(R7-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR2=I(R7-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR1=I(R7-%i);\n", funcOffset -= 4);
+		fprintf(fp, "\tR0=I(R7-%i);\n", funcOffset -= 4);
+		//funcOffset -= 4;
 	} else {
-		fprintf(fp, "\tRR3=F(R6-%i);\n", localOffset -= 4);
-		fprintf(fp, "\tRR2=F(R6-%i);\n", localOffset -= 4);
-		fprintf(fp, "\tRR1=F(R6-%i);\n", localOffset -= 4);
-		fprintf(fp, "\tRR0=F(R6-%i);\n", localOffset -= 4);
-		fprintf(fp, "\tR4=I(R6-%i);\n", localOffset -= 4);
-		fprintf(fp, "\tR3=I(R6-%i);\n", localOffset -= 4);
-		fprintf(fp, "\tR2=I(R6-%i);\n", localOffset -= 4);
-		fprintf(fp, "\tR1=I(R6-%i);\n", localOffset -= 4);
-		fprintf(fp, "\tR0=I(R6-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tRR3=F(R7-%i);\n", localOffset);
+		fprintf(fp, "\tRR2=F(R7-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tRR1=F(R7-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tRR0=F(R7-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR4=I(R7-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR3=I(R7-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR2=I(R7-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR1=I(R7-%i);\n", localOffset -= 4);
+		fprintf(fp, "\tR0=I(R7-%i);\n", localOffset -= 4);
+		//funcOffset -= 4;
 	}	
 }
 
@@ -990,33 +991,35 @@ int callFunctionQ(char* funcName){
 	else {
 		if (1 != f.size) yyerror("El número de parámetros no coincide con el de la función.");
 		saveRegs();
-		if (inFunc) fprintf(fp, "\tR6=R6-%i;\n", funcOffset);
-		else fprintf(fp, "\tR6=R6-%i;\n", localOffset);
-		fprintf(fp, "\tI(R6-4)=%i;\n", nextLabel);
 		return f.memDir;
 	}
 }
 
-void leaveFunctionQ(int label){	
+void leaveFunctionQ(int label){
+	fprintf(fp, "\tI(R7-4)=%i;\n", nextLabel);
 	fprintf(fp, "\tGT(%i);\n", label);
 	fprintf(fp, "L %i:\n", nextLabel++);
-	if (inFunc) fprintf(fp, "\tR6=R6+%i;\n", funcOffset);	
-	else fprintf(fp, "\tR6=R6+%i;\n", localOffset);
+	if (inFunc) fprintf(fp, "\tR7=R7+%i;\n", funcOffset);	
+	else fprintf(fp, "\tR7=R7+%i;\n", localOffset);
 	loadRegs();
 	funcAssignedParams = 0;
 }
 
 void assignParamQ(int reg){
 	if (reg < 0 || reg > 100) yyerror("Solo se puede asignar a funciones valores numéricos.");
-	else if (reg > 9){		
+	else if (reg > 9){			
+		if (inFunc) fprintf(fp, "\tR7=R7-%i;\n", funcOffset);
+		else fprintf(fp, "\tR7=R7-%i;\n", localOffset);		
 		funcAssignedParams++;
 		int mem = 4 + funcAssignedParams*4;
 		reg -= 10;
-		fprintf(fp, "\tF(R6-%i)=RR%i;\n", mem, reg);
-	} else {		
+		fprintf(fp, "\tF(R7-%i)=RR%i;\n", mem, reg);
+	} else {			
+		if (inFunc) fprintf(fp, "\tR7=R7-%i;\n", funcOffset);
+		else fprintf(fp, "\tR7=R7-%i;\n", localOffset);		
 		funcAssignedParams++;
 		int mem = 4 + funcAssignedParams*4;
-		fprintf(fp, "\tI(R6-%i)=R%i;\n", mem, reg);
+		fprintf(fp, "\tI(R7-%i)=R%i;\n", mem, reg);
 	}
 }
 

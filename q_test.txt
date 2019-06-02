@@ -19,7 +19,8 @@ endfunc
 func recur (a)
 	show a
 	if a > 0 then recur(a - 1) done
+	show a
 endfunc
 
 funcion (2)
-recur(4)
+recur(3)
